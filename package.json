@@ -8,7 +8,7 @@
     "type-check:watch": "npm run type-check -- --watch",
     "build:types": "tsc --emitDeclarationOnly",
     "build:js": "rollup -c",
-    "build": "npm run build:types && npm run build:js"
+    "build": "eslint --fix ./src/** && npm run build:types && npm run build:js"
   },
   "main": "dist/rollup-plugin-babel.cjs.js",
   "module": "dist/rollup-plugin-babel.esm.js",
@@ -28,11 +28,28 @@
     "@rollup/plugin-babel": "5.2.1",
     "@rollup/plugin-commonjs": "16.0.0",
     "@rollup/plugin-node-resolve": "10.0.0",
+    "@typescript-eslint/eslint-plugin": "^4.9.0",
+    "@typescript-eslint/parser": "^4.9.0",
+    "eslint": "^7.15.0",
+    "eslint-config-standard": "^16.0.2",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "husky": "^4.3.4",
+    "lint-staged": "^10.5.3",
     "rollup": "2.33.3",
     "ts-node": "^9.1.0",
     "typescript": "4.1.2"
   },
   "dependencies": {
     "slimbot": "^4.9.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.ts": "eslint --cache --fix"
   }
 }
