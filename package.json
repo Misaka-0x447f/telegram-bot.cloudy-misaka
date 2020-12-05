@@ -1,0 +1,38 @@
+{
+  "name": "rollup-typescript-babel",
+  "version": "1.0.0",
+  "description": "A sample setup using Rollup and Babel to build TypeScript code, and using TypeScript for type-checking.",
+  "scripts": {
+    "start": "npx ts-node ./src/index.ts",
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "npm run type-check -- --watch",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:js": "rollup -c",
+    "build": "npm run build:types && npm run build:js"
+  },
+  "main": "dist/rollup-plugin-babel.cjs.js",
+  "module": "dist/rollup-plugin-babel.esm.js",
+  "browser": "dist/rollup-plugin-babel.iife.js",
+  "types": "dist/types/index.d.ts",
+  "author": {
+    "name": "Oleksandr T.",
+    "email": "oleksandr.tarasiuk@outlook.com"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "7.12.7",
+    "@babel/plugin-proposal-class-properties": "7.12.1",
+    "@babel/plugin-proposal-object-rest-spread": "7.12.1",
+    "@babel/preset-env": "7.12.7",
+    "@babel/preset-typescript": "7.12.7",
+    "@rollup/plugin-babel": "5.2.1",
+    "@rollup/plugin-commonjs": "16.0.0",
+    "@rollup/plugin-node-resolve": "10.0.0",
+    "rollup": "2.33.3",
+    "ts-node": "^9.1.0",
+    "typescript": "4.1.2"
+  },
+  "dependencies": {
+    "slimbot": "^4.9.0"
+  }
+}
