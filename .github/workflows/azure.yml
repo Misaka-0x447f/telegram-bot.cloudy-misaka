@@ -18,10 +18,10 @@
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     branches:
-      - main
+      - master
 
 env:
   AZURE_WEBAPP_NAME: misaka-telegram-bot    # set this to your application's name
