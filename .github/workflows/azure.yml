@@ -40,7 +40,7 @@ jobs:
       run: |
         npm install
         npm run build
-        echo "${{ secrets.ENV }}" > ./dist/ecosystem.config.js
+        echo '${{ secrets.ENV }}' > ./dist/ecosystem.config.js
     - name: deploy file
       uses: wlixcc/SFTP-Deploy-Action@v1.0
       with:
