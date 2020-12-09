@@ -36,7 +36,7 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ env.NODE_VERSION }}
-    - name: npm install, build, and test
+    - name: npm install & build
       run: |
         npm install
         npm run build
@@ -46,6 +46,7 @@ jobs:
       with:
         username: 'root'
         server: '78.142.194.8'
+        port: 17535
         ssh_private_key: ${{ secrets.HOSTKER_SECRET_KEY }}
         local_path: './dist/*'
         remote_path: '/var/node-app/misaka-telegram-bot'
