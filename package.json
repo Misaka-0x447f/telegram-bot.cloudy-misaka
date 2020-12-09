@@ -11,7 +11,7 @@
     "build": "eslint --fix ./src/**/* && npm run build:js"
   },
   "type": "module",
-  "module": "dist/index.esm.js",
+  "main": "dist/index.js",
   "types": "dist/types/index.d.ts",
   "license": "MIT",
   "devDependencies": {
