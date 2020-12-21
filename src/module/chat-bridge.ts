@@ -27,4 +27,12 @@ bot.on('message', async (ctx) => {
     await sleep(3000)
     await ctx.telegram.forwardMessage(ctx.message.chat.id, 143847141, 237)
   }
+  const messageLength = ctx.message?.text?.length || 0
+  const hasPhoto = ctx.message?.photo ? 1 : 0
+  const hasDocument = ctx.message?.document ? 1 : 0
+  if (Math.random() < Math.max(0, 0.1 - (messageLength + hasPhoto * 5 + hasDocument * 100) / 100)) {
+    if (message) {
+      await ctx.telegram.forwardMessage(message.chat.id, message.chat.id, message.message_id)
+    }
+  }
 })
