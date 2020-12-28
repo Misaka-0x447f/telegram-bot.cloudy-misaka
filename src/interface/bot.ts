@@ -1,4 +1,7 @@
 import { Telegraf } from 'telegraf'
+import { TelegrafContext } from 'telegraf/typings/context'
+import TypedEvent from '../utils/TypedEvent'
+import * as tt from 'telegraf/typings/telegram-types'
 
 if (!process.env.TELEGRAM_BOT_TOKEN) {
   console.error('Env [TELEGRAM_BOT_TOKEN] was not set. Exiting.')
@@ -15,4 +18,18 @@ bot.telegram.getMe().then((botInfo) => {
   bot.options.username = botInfo.username
 })
 
-export default bot
+bot.startPolling(30, 100)
+console.log('server started')
+export const eventBus = {
+  message: TypedEvent<{ ctx: TelegrafContext, message: NonNullable<tt.Update['message']>, currentChat: tt.Chat }>()
+}
+bot.on('message', (ctx) => {
+  const currentChat = ctx.update.message?.chat
+  const message = ctx.update.message
+  if (!currentChat || !message) return
+  eventBus.message.dispatch({
+    ctx,
+    message,
+    currentChat
+  })
+})
