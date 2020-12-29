@@ -25,15 +25,17 @@ eventBus.message.sub(async ({ ctx, message }) => {
 eventBus.message.sub(async ({ ctx, message }) => {
   // if no message body skip this
   const messageLength = ctx.message?.text?.length || 0
-  const messageLengthBonusDef = [0, 5, 3.5, 2.4, 1.6, 1.2, 0.8, 0.4, 0.2, 0.1]
-  const messageLengthBonus = messageLengthBonusDef[messageLength] || 0
+  const messageLengthBonusDef = [0, 5, 3.5, 2.4, 0.8, 0.2]
+  const messageLengthBonus = messageLength >= messageLengthBonusDef.length ? -100 : (messageLengthBonusDef[messageLength] || 0)
   const hasPhoto = ctx.message?.photo ? -3 : 0
   const hasSticker = ctx.message?.sticker ? 7 : 0
-  const hasDocument = ctx.message?.document ? -10 : 0
+  const hasDocument = ctx.message?.document ? -100 : 0
   const forwardCounterBonus = [5, 2.5, 1, 0.4, 0.1]
   const forwardCounterBonusChance = (5 - messageLength) * (forwardCounterBonus[store.selfForwardCounter] || 0)
   const chance = messageLengthBonus + hasPhoto + hasSticker + hasDocument + forwardCounterBonusChance
+  console.log(`chance: ${chance}`)
   if (rand(0, 100) < chance) {
+    console.log('triggered')
     await sleep(rand(2, 5))
     if (message) {
       await ctx.telegram.forwardMessage(message.chat.id, message.chat.id, message.message_id)
