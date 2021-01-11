@@ -1,8 +1,7 @@
-// start functions
-import { eventBus } from '../interface/bot'
+import bot from '../interface/bot'
 import { rand, sleep } from '../utils/lang'
 
-eventBus.command.sub(async ({ ctx, meta }) => {
+bot.misaka.command.sub(async ({ ctx, meta }) => {
   if (meta.commandName !== 'start' || !ctx.message) return
   await sleep(rand(1000, 2000))
   await ctx.telegram.sendMessage(ctx.message.chat.id, 'Emmm')

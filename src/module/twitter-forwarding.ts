@@ -1,14 +1,21 @@
 import { getTweetTimelineById, getUserByUsername } from '../interface/twitter'
 import promiseRetry from 'promise-retry'
 import store from '../store'
-import { bot } from '../interface/bot'
 import telemetry from '../utils/telemetry'
 import { HTTPError } from 'got'
+import bot from '../interface/bot'
 
 export const twitterForwardingList = [
   {
+    operator: bot.misaka,
     from: 'MisakaKumomi',
     to: [-1001465692020, 1244020370],
+    options: { excludeReplies: true },
+  },
+  {
+    operator: bot.ywwuyi,
+    from: 'ywwuyi',
+    to: [-1001322798787],
     options: { excludeReplies: true },
   },
 ]
@@ -19,7 +26,6 @@ export const twitterForwardingList = [
       store.twitterForwardingList.push({
         ...val,
         from: data?.id,
-        _runtimeData: { mostRecentTime: null },
       })
     }
   }
@@ -37,7 +43,7 @@ export const twitterForwardingList = [
         for (const el of recentTweets.data) {
           for (const tgMessageTarget of val.to) {
             await promiseRetry((retry) =>
-              bot.telegram
+              val.operator.bot.telegram
                 .sendMessage(tgMessageTarget, el.text)
                 .catch((e) => retry(e))
             )

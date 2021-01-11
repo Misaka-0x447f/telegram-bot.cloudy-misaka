@@ -1,8 +1,7 @@
-// ping
-import { eventBus } from '../interface/bot'
 import promiseRetry from 'promise-retry'
+import bot from '../interface/bot'
 
-eventBus.message.sub(async ({ ctx, message, currentChat }) => {
+bot.misaka.message.sub(async ({ ctx, message, currentChat }) => {
   const isPing =
     (message.text?.includes('/ping') && message.chat.type === 'private') ||
     (message.text?.includes('/ping@Misaka_0x447f_bot') &&

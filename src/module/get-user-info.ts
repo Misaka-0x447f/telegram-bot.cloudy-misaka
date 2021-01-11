@@ -1,7 +1,7 @@
-import { eventBus } from '../interface/bot'
+import bot from '../interface/bot'
 
-eventBus.command.sub(async ({ ctx, meta }) => {
-  if (meta.commandName !== 'getUserInfo' || !ctx.chat) return
+bot.misaka.command.sub(async ({ ctx, meta }) => {
+  if (meta.commandName !== 'get_user_info' || !ctx.chat) return
   ctx.telegram
     .sendMessage(
       ctx.chat.id,

@@ -1,11 +1,11 @@
 import { isString } from 'lodash-es'
 import { stringify } from './lang'
 import promiseRetry from 'promise-retry'
-import { bot } from '../interface/bot'
 import register from '../register'
+import bot from '../interface/bot'
 
 export default (...log: any[]) => {
-  let res = 'MisakaBot 发生了一个错误。\n'
+  let res = '发生了错误。\n'
   log.forEach((el) => {
     if (isString(el)) {
       res = res.concat(el).concat('\n')
@@ -14,6 +14,8 @@ export default (...log: any[]) => {
     }
   })
   register.sendAlertToTelegramAccount.forEach((target) => {
-    promiseRetry((retry) => bot.telegram.sendMessage(target, res).catch(retry)).then()
+    promiseRetry((retry) =>
+      bot.misaka.bot.telegram.sendMessage(target, res).catch(retry)
+    ).then()
   })
 }

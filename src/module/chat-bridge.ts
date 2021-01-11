@@ -1,7 +1,7 @@
 import promiseRetry from 'promise-retry'
 import { rand, sleep } from '../utils/lang'
 import store from '../store'
-import { eventBus } from '../interface/bot'
+import bot from '../interface/bot'
 
 const list = [
   {
@@ -11,7 +11,7 @@ const list = [
 ]
 
 // forwarding functions
-eventBus.message.sub(async ({ ctx, message }) => {
+bot.misaka.message.sub(async ({ ctx, message }) => {
   for (const entity of list) {
     if (message?.chat.id === entity.from && message.from) {
       promiseRetry((retry, number) =>
@@ -27,7 +27,7 @@ eventBus.message.sub(async ({ ctx, message }) => {
   }
 })
 // passive repeater functions
-eventBus.message.sub(async ({ ctx, message }) => {
+bot.misaka.message.sub(async ({ ctx, message }) => {
   // if no message body skip this
   const messageLength = ctx.message?.text?.length || 0
   const messageLengthBonusDef = [0, 5, 3.5, 2.4, 0.8, 0.2]
@@ -64,7 +64,7 @@ eventBus.message.sub(async ({ ctx, message }) => {
   }
 })
 // active repeater functions
-eventBus.message.sub(async ({ ctx, message, currentChat }) => {
+bot.misaka.message.sub(async ({ ctx, message, currentChat }) => {
   const targetMessageId = message?.reply_to_message?.message_id
   const chatId = currentChat?.id
   if (
