@@ -1,5 +1,13 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
-import './module/chat-bridge'
+import { bot } from './interface/bot'
 
-setInterval(() => {}, 86400000)
+import './module/chat-bridge'
+import './module/get-user-info'
+import './module/ping'
+import './module/start'
+import './module/twitter-forwarding'
+
+// Enable graceful stop
+process.once('SIGINT', () => bot.stop())
+process.once('SIGTERM', () => bot.stop())

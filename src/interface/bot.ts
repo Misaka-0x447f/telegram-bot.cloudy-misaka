@@ -4,8 +4,7 @@ import TypedEvent from '../utils/TypedEvent'
 import * as tt from 'telegraf/typings/telegram-types'
 
 if (!process.env.TELEGRAM_BOT_TOKEN) {
-  console.error('Env [TELEGRAM_BOT_TOKEN] was not set. Exiting.')
-  process.exit()
+  throw new Error('Env [TELEGRAM_BOT_TOKEN] was not set. Exiting.')
 }
 
 export const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
@@ -21,15 +20,40 @@ bot.telegram.getMe().then((botInfo) => {
 bot.startPolling(30, 100)
 console.log('server started')
 export const eventBus = {
-  message: TypedEvent<{ ctx: TelegrafContext, message: NonNullable<tt.Update['message']>, currentChat: tt.Chat }>()
+  message: TypedEvent<{
+    ctx: TelegrafContext
+    message: NonNullable<tt.Update['message']>
+    currentChat: tt.Chat
+    meta: { isCommand: boolean }
+  }>(),
+  command: TypedEvent<{
+    ctx: TelegrafContext
+    meta: { commandName: string }
+  }>(),
 }
+
 bot.on('message', (ctx) => {
   const currentChat = ctx.update.message?.chat
   const message = ctx.update.message
-  if (!currentChat || !message) return
+  if (!currentChat || !message) {
+    return
+  }
+  const commandMatchArray =
+    (message.chat.type === 'private' && message.text?.match(/^\/(\w+)\s*$/)) ||
+    message.text?.match(new RegExp(`^\\/(\\w+)\\s*@${bot.options.username}$`))
+
+  if (commandMatchArray) {
+    eventBus.command.dispatch({
+      ctx,
+      meta: { commandName: commandMatchArray[1] },
+    })
+  }
   eventBus.message.dispatch({
     ctx,
     message,
-    currentChat
+    currentChat,
+    meta: {
+      isCommand: !!commandMatchArray,
+    },
   })
 })
