@@ -14,7 +14,9 @@ let hasError = false
 for (const bot of botList) {
   if (!process.env[bot.token]) {
     hasError = true
-    console.error(`Env [${bot.name}] was not set. Exiting.`)
+    console.error(
+      `Env [${bot.token}] was not set. Exiting. Active env: ${process.env}`
+    )
   }
 }
 if (hasError) process.exit(1)
