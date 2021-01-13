@@ -2,7 +2,6 @@ import { Telegraf } from 'telegraf'
 import { TelegrafContext } from 'telegraf/typings/context'
 import TypedEvent from '../utils/TypedEvent'
 import * as tt from 'telegraf/typings/telegram-types'
-import { stringify } from '../utils/lang'
 
 type BotName = 'misaka' | 'ywwuyi'
 
@@ -16,9 +15,7 @@ for (const bot of botList) {
   if (!process.env[bot.token]) {
     hasError = true
     console.error(
-      `Env [${bot.token}] was not set. Exiting. Active env: ${stringify(
-        process.env
-      )}`
+      `Env [${bot.token}] was not set. Exiting.`
     )
   }
 }

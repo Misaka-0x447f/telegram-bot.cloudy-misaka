@@ -79,7 +79,7 @@ export const twitterForwardingList: Array<{
     if (startTime) {
       await worker(startTime, now)
     }
-    setTimeout(() => main(new Date(new Date(now).getTime() + 1000)), 20000)
+    setTimeout(() => main(new Date(new Date(now).getTime() + 1000)), twitterForwardingList.length * 15000)
   }
   await main()
 })()
