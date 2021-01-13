@@ -4,18 +4,36 @@ import store from '../store'
 import telemetry from '../utils/telemetry'
 import { HTTPError } from 'got'
 import bot from '../interface/bot'
+import { isFunction } from 'lodash-es'
+import { sendMessage } from '../interface/lark'
 
-export const twitterForwardingList = [
+export const twitterForwardingList: Array<{
+  operator: typeof bot.misaka
+  from: string
+  to: Array<number | ((key: { content: string }) => number | null)>
+  options: Parameters<typeof getTweetTimelineById>[1]
+}> = [
   {
     operator: bot.misaka,
     from: 'MisakaKumomi',
-    to: [-1001465692020, 1244020370],
+    to: [
+      -1001465692020,
+      1244020370,
+      ({ content }) =>
+        content.toLowerCase().includes('#arcaea') ? -1001150518332 : null,
+    ],
     options: { excludeReplies: true },
   },
   {
     operator: bot.ywwuyi,
     from: 'ywwuyi',
-    to: [-1001322798787],
+    to: [
+      -1001322798787,
+      ({ content }) => {
+        sendMessage(content, 'oc_dcc61de5e98beecfd87045c3df9a9744').then()
+        return null
+      },
+    ],
     options: { excludeReplies: true },
   },
 ]
@@ -42,9 +60,13 @@ export const twitterForwardingList = [
       if (recentTweets && recentTweets?.data) {
         for (const el of recentTweets.data) {
           for (const tgMessageTarget of val.to) {
+            const target = isFunction(tgMessageTarget)
+              ? tgMessageTarget({ content: el.text })
+              : tgMessageTarget
+            if (target === null) return
             await promiseRetry((retry) =>
               val.operator.bot.telegram
-                .sendMessage(tgMessageTarget, el.text)
+                .sendMessage(target, el.text)
                 .catch((e) => retry(e))
             )
           }
