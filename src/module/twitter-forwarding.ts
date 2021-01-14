@@ -1,5 +1,4 @@
 import { getTweetTimelineById, getUserByUsername } from '../interface/twitter'
-import promiseRetry from 'promise-retry'
 import store from '../store'
 import telemetry from '../utils/telemetry'
 import { HTTPError } from 'got'
@@ -64,11 +63,7 @@ export const twitterForwardingList: Array<{
               ? tgMessageTarget({ content: el.text })
               : tgMessageTarget
             if (target === null) return
-            await promiseRetry((retry) =>
-              val.operator.bot.telegram
-                .sendMessage(target, el.text)
-                .catch((e) => retry(e))
-            )
+            await val.operator.sendMessage(target, el.text)
           }
         }
       }

@@ -2,6 +2,7 @@ import { Telegraf } from 'telegraf'
 import { TelegrafContext } from 'telegraf/typings/context'
 import TypedEvent from '../utils/TypedEvent'
 import * as tt from 'telegraf/typings/telegram-types'
+import promiseRetry from 'promise-retry'
 
 type BotName = 'misaka' | 'ywwuyi'
 
@@ -14,9 +15,7 @@ let hasError = false
 for (const bot of botList) {
   if (!process.env[bot.token]) {
     hasError = true
-    console.error(
-      `Env [${bot.token}] was not set. Exiting.`
-    )
+    console.error(`Env [${bot.token}] was not set. Exiting.`)
   }
 }
 if (hasError) process.exit(1)
@@ -47,14 +46,16 @@ const eventBusFactory = () => ({
   }>(),
   command: TypedEvent<{
     ctx: TelegrafContext
-    meta: { commandName: string }
+    meta: { commandName: string; args: string[] }
   }>(),
 })
 
-export const exportBot = {} as Record<
-  BotName,
-  ReturnType<typeof eventBusFactory> & { bot: Telegraf<TelegrafContext> }
->
+export type BotType = ReturnType<typeof eventBusFactory> & {
+  bot: Telegraf<TelegrafContext>
+  sendMessage: (chatId: number, text: string) => Promise<tt.Message>
+}
+
+export const exportBot = {} as Record<BotName, BotType>
 
 bots.forEach((el) => {
   const eventBus = eventBusFactory()
@@ -67,15 +68,21 @@ bots.forEach((el) => {
     }
     const commandMatchArray =
       (message.chat.type === 'private' &&
-        message.text?.match(/^\/(\w+)\s*$/)) ||
+        message.text?.match(/^\/(\w+).*$/)) ||
       message.text?.match(
-        new RegExp(`^\\/(\\w+)\\s*@${el.instance.options.username}$`)
+        new RegExp(`^\\/(\\w+).*@${el.instance.options.username}$`)
       )
 
     if (commandMatchArray) {
       eventBus.command.dispatch({
         ctx,
-        meta: { commandName: commandMatchArray[1] },
+        meta: {
+          commandName: commandMatchArray[1],
+          args: message
+            .text!.match(/\/\w+(?:\s?@\w+)?(.*)/)![1]
+            .trim()
+            .split(' '),
+        },
       })
     }
     eventBus.message.dispatch({
@@ -88,7 +95,14 @@ bots.forEach((el) => {
     })
   })
 
-  exportBot[el.name] = { ...eventBus, bot: el.instance }
+  exportBot[el.name] = {
+    ...eventBus,
+    bot: el.instance,
+    sendMessage: (chatId: number, text: string) =>
+      promiseRetry((retry) =>
+        el.instance.telegram.sendMessage(chatId, text).catch(retry)
+      ),
+  }
 })
 
 export default exportBot

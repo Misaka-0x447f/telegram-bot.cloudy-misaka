@@ -1,13 +1,10 @@
 import { fetchRoomStatus } from '../interface/douyu'
 import store from '../store'
 import bot from '../interface/bot'
-import promiseRetry from 'promise-retry'
 import { sleep } from '../utils/lang'
 
 const sendMessage = (text: string) =>
-  promiseRetry((retry) =>
-    bot.ywwuyi.bot.telegram.sendMessage(-1001322798787, text).catch(retry)
-  )
+  bot.ywwuyi.sendMessage(-1001322798787, text)
 
 const run = () => setTimeout(worker, 30000)
 
