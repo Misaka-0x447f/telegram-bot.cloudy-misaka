@@ -7,6 +7,7 @@ import './module/get-user-info'
 import './module/ping'
 import './module/start'
 import './module/twitter-forwarding'
+import './module/ywwuyi-live'
 
 const gracefulStopHandler = () => {
   for (const operator of Object.values(bot)) {

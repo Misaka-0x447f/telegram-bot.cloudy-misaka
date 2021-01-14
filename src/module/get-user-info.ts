@@ -16,3 +16,5 @@ bot.misaka.command.sub(async ({ ctx, meta }) => {
     )
     .then()
 })
+
+console.log('get-user-info ready.')

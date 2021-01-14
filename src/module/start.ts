@@ -13,3 +13,5 @@ bot.misaka.command.sub(async ({ ctx, meta }) => {
   await sleep(rand(3000, 5000))
   await ctx.telegram.forwardMessage(ctx.message.chat.id, 143847141, 237)
 })
+
+console.log('start ready.')
