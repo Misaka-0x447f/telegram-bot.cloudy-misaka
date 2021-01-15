@@ -25,7 +25,7 @@ const handler = () => {
         await contact.operator.sendMessage(chatId, 'Permission denied.')
         return
       }
-      const helpMessage = `arguments: [contact] [...messages]\n where contact can be one of the following: ${contact.list
+      const helpMessage = `arguments: [contact] [...messages]\nwhere contact can be one of the following: ${contact.list
         .map((el) => el.name)
         .concat('; ')}`
       for (const to of contact.list) {
@@ -37,7 +37,7 @@ const handler = () => {
             )
             return
           }
-          await contact.operator.sendMessage(to.id, meta.args[1])
+          await contact.operator.sendMessage(to.id, meta.args.slice(1).join(' '))
           await contact.operator.sendMessage(chatId, `success.`)
           return
         }

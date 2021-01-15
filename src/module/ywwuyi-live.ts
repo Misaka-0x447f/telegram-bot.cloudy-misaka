@@ -16,16 +16,14 @@ const worker = async () => {
   }
   if (res.room.isOnline && !store.ywwuyiLiveOnline) {
     await sendMessage(
-      `${res.room.liveName}\n昏睡上播 https://www.douyu.com/6655`
+      `${res.room.liveName}\n昏睡上播`
     )
-    await sleep(20000)
-    await sendMessage(`主播当前正在分区: ${res.room.category}`)
   } else if (!res.room.isOnline && store.ywwuyiLiveOnline) {
     const liveMinutes =
       (res.room.lastOfflineTime.getTime() - res.room.lastOnlineTime.getTime()) /
       60000
     await sendMessage(
-      `已播${Math.floor(liveMinutes / 60)}小时${liveMinutes % 60}分钟`
+      `已播${Math.floor(liveMinutes / 60)}小时${Math.round(liveMinutes % 60).toString().padStart(2, '0')}分钟`
     )
     await sleep(20000)
     await sendMessage('zzzzzzzzz')
