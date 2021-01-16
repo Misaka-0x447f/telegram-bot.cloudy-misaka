@@ -14,8 +14,11 @@ export default (...log: any[]) => {
     }
   })
   register.sendAlertToTelegramAccount.forEach((target) => {
-    promiseRetry((retry) =>
-      bot.misaka.bot.telegram.sendMessage(target, res).catch(retry)
+    promiseRetry(
+      (retry) => bot.misaka.bot.telegram.sendMessage(target, res).catch(retry),
+      {
+        retries: 3,
+      }
     ).then()
   })
 }

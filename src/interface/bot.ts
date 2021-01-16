@@ -50,14 +50,7 @@ const eventBusFactory = () => ({
   }>(),
 })
 
-export type BotType = ReturnType<typeof eventBusFactory> & {
-  bot: Telegraf<TelegrafContext>
-  sendMessage: (chatId: number, text: string) => Promise<tt.Message>
-}
-
-export const exportBot = {} as Record<BotName, BotType>
-
-bots.forEach((el) => {
+const botFactory = (el: typeof bots[0]) => {
   const eventBus = eventBusFactory()
 
   el.instance.on('message', (ctx) => {
@@ -67,11 +60,11 @@ bots.forEach((el) => {
       return
     }
     const commandMatchArray =
-      (message.chat.type === 'private' &&
-        message.text?.match(/^\/(\w+).*$/)) ||
-      message.text?.match(
-        new RegExp(`^\\/(\\w+).*@${el.instance.options.username}$`)
-      )
+        (message.chat.type === 'private' &&
+            message.text?.match(/^\/(\w+).*$/)) ||
+        message.text?.match(
+            new RegExp(`^\\/(\\w+).*@${el.instance.options.username}$`)
+        )
 
     if (commandMatchArray) {
       eventBus.command.dispatch({
@@ -79,9 +72,9 @@ bots.forEach((el) => {
         meta: {
           commandName: commandMatchArray[1],
           args: message
-            .text!.match(/\/\w+(?:\s?@\w+)?(.*)/)![1]
-            .trim()
-            .split(' '),
+              .text!.match(/\/\w+(?:\s?@\w+)?(.*)/)![1]
+              .trim()
+              .split(' '),
         },
       })
     }
@@ -95,14 +88,22 @@ bots.forEach((el) => {
     })
   })
 
-  exportBot[el.name] = {
+  return {
     ...eventBus,
     bot: el.instance,
     sendMessage: (chatId: number, text: string) =>
-      promiseRetry((retry) =>
-        el.instance.telegram.sendMessage(chatId, text).catch(retry)
-      ),
+        promiseRetry((retry) =>
+            el.instance.telegram.sendMessage(chatId, text).catch(retry)
+        ),
   }
+}
+
+export type BotType = ReturnType<typeof botFactory>
+
+export const exportBot = {} as Record<BotName, BotType>
+
+bots.forEach((el) => {
+  exportBot[el.name] = botFactory(el)
 })
 
 export default exportBot

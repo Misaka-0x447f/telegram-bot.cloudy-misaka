@@ -20,24 +20,21 @@ const handler = () => {
   for (const contact of contactConfigs) {
     contact.operator.command.sub(async ({ ctx, meta }) => {
       const chatId = ctx.message?.chat.id!
-      if (meta.commandName !== 'send_message' || !chatId) return
+      if (meta.commandName !== 'say' || !chatId) return
       if (!register.superuser.includes(chatId)) {
         await contact.operator.sendMessage(chatId, 'Permission denied.')
         return
       }
-      const helpMessage = `arguments: [contact] [...messages]\nwhere contact can be one of the following: ${contact.list
+      const helpMessage = `arguments: [contact]\nwhere contact can be one of the following: ${contact.list
         .map((el) => el.name)
         .concat('; ')}`
       for (const to of contact.list) {
         if (to.name === meta.args[0]) {
-          if (!meta.args[1]) {
-            await contact.operator.sendMessage(
-              chatId,
-              `too few arguments. ${helpMessage}`
-            )
+          if (!ctx.message?.reply_to_message) {
+            await contact.operator.sendMessage(chatId, 'Reply to a message to say.')
             return
           }
-          await contact.operator.sendMessage(to.id, meta.args.slice(1).join(' '))
+          await ctx.telegram.sendCopy(to.id, ctx.message?.reply_to_message)
           await contact.operator.sendMessage(chatId, `success.`)
           return
         }
