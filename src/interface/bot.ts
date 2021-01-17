@@ -3,6 +3,7 @@ import { TelegrafContext } from 'telegraf/typings/context'
 import TypedEvent from '../utils/TypedEvent'
 import * as tt from 'telegraf/typings/telegram-types'
 import promiseRetry from 'promise-retry'
+import { Message } from 'telegram-typings'
 
 type BotName = 'misaka' | 'ywwuyi'
 
@@ -40,7 +41,7 @@ bots.forEach((bot) => {
 const eventBusFactory = () => ({
   message: TypedEvent<{
     ctx: TelegrafContext
-    message: NonNullable<tt.Update['message']>
+    message: NonNullable<Message>
     currentChat: tt.Chat
     meta: { isCommand: boolean }
   }>(),

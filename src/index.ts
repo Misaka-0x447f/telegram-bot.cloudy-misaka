@@ -9,6 +9,7 @@ import './module/say'
 import './module/start'
 import './module/twitter-forwarding'
 import './module/ywwuyi-live'
+import './module/repeater'
 
 const gracefulStopHandler = () => {
   for (const operator of Object.values(bot)) {
