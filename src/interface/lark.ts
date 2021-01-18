@@ -2,11 +2,6 @@
 import got from 'got'
 import telemetry from '../utils/telemetry'
 
-if (!process.env.LARK_BOT_SECRET_YWWUYI) {
-  console.error(`Env [LARK_BOT_SECRET_YWWUYI] was not set. Exiting.`)
-  process.exit(1)
-}
-
 const appId = 'cli_9e9bf61428af1101'
 const appSecret = process.env.LARK_BOT_SECRET_YWWUYI
 
@@ -34,6 +29,10 @@ const fetchBearerToken = async () => {
 }
 
 export const sendMessage = async (message: string, chatId: string) => {
+  if (!appSecret) {
+      console.warn('lark bot has been disabled.')
+      return
+  }
   const token = await fetchBearerToken()
   if (!token) return
   return got
@@ -49,5 +48,11 @@ export const sendMessage = async (message: string, chatId: string) => {
         },
       },
     })
-    .json().catch(el => telemetry(`Sending lark message to ${chatId} with content ${message} failed.`, el))
+    .json()
+    .catch((el) =>
+      telemetry(
+        `Sending lark message to ${chatId} with content ${message} failed.`,
+        el
+      )
+    )
 }
