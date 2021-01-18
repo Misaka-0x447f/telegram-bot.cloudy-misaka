@@ -1,27 +1,13 @@
-# Rollup-TypeScript-Babel
-
-> This is sample repository demonstrates how to use Rollup, TypeScript and Babel
-
-## Building the repo
-
-```shell
-npm run build
+## Required env and example
+```
+TWITTER_BEARER_TOKEN: "AAAAAAAAAAAAAAAAAAAAACBaLAEAAAAAkLQo7yVoHZ1PA99vgxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+TELEGRAM_BOT_TOKEN: "1000000000:AAHzpsDuAMhNqI1oLbuliPfFlzIrNLfhS56",
+TELEGRAM_BOT_TOKEN_YWWUYI: "1000000000:AAHJRuKdRbXClK29Gzy807wdc5lMC8ry4Fd",
+LARK_BOT_SECRET_YWWUYI: "mbQYholKpW2kBvaklZ3XKNUCFHHbunpE",
 ```
 
-## Building only types
-
-```shell
-npm run build:types
+## Setup
 ```
-
-## Type-Checking the repo
-
-```shell
-npm run type-check
-```
-
-And to run in --watch mode:
-
-```shell
-npm run type-check:watch
+npm i
+npm start
 ```
