@@ -22,7 +22,7 @@ export const storeMethods = {
     if (!isUndefined(store.chatHistory[chatId])) return
     const history: MessageHistory[] = []
     store.chatHistory[chatId] = {
-      nonRepeatCounter: 0,
+      nonRepeatCounter: Infinity,
       messageHistory: history,
       createMessageHistory: (p) => {
         history.unshift(p)

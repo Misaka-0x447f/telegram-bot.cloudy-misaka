@@ -10,7 +10,8 @@ bot.misaka.message.sub(async ({ ctx, message, currentChat }) => {
   if (!chatId) return
   storeMethods.createChatHistoryIfNX(chatId)
   const createDigest = (message: Message) =>
-    (message.sticker?.file_id || '') + message.text
+    // @ts-ignore
+    (message?.sticker?.file_unique_id || '') + message.text
   const createMessageHistory = store.chatHistory[chatId].createMessageHistory
   createMessageHistory({
     digest: createDigest(message),
@@ -18,7 +19,6 @@ bot.misaka.message.sub(async ({ ctx, message, currentChat }) => {
   })
   const historyObject = store.chatHistory[chatId].messageHistory
   let sameMessageCount = 0 // starts from -1, if no messages same return 0, if nothing to compare return -1.
-  console.log(historyObject)
   for (let i = 1; i < historyObject.length; i++) {
     if (historyObject[i].digest === historyObject[i - 1].digest) {
       sameMessageCount++
@@ -31,17 +31,16 @@ bot.misaka.message.sub(async ({ ctx, message, currentChat }) => {
       break
     }
   }
-  console.log(sameMessageCount)
   const messageLength = ctx.message?.text?.length || 0
-  const messageLengthBonusDef = [0, 5, 3.5, 2.4, 0.8, 0.2]
+  const messageLengthBonusDef = [0, 100, 70, 40, 10, 4].map(el => el * 0.02)
   const messageLengthBonus =
     messageLength >= messageLengthBonusDef.length
       ? -100
       : messageLengthBonusDef[messageLength] || 0
   const hasPhoto = ctx.message?.photo ? -100 : 0
-  const hasSticker = ctx.message?.sticker ? 7 : 0
+  const hasSticker = ctx.message?.sticker ? 2 : 0
   const hasDocument = ctx.message?.document ? -100 : 0
-  const forwardCounterBonus = [5, 2.5, 1, 0.4, 0.1]
+  const forwardCounterBonus = [2, 1.5, 0.9, 0.4, 0]
   const forwardCounterBonusChance =
     (5 - messageLength) *
     (forwardCounterBonus[store.chatHistory[chatId].nonRepeatCounter] || 0)
@@ -51,9 +50,7 @@ bot.misaka.message.sub(async ({ ctx, message, currentChat }) => {
     hasSticker +
     hasDocument +
     forwardCounterBonusChance
-  console.log(`chance: ${chance}`)
   if (rand(0, 100) < chance || sameMessageCount === 1) {
-    console.log('triggered')
     await sleep(rand(2, 5))
     if (message) {
       await ctx.telegram.sendCopy(message.chat.id, message)
