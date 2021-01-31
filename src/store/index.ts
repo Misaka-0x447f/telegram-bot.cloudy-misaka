@@ -1,7 +1,7 @@
 import { twitterForwardingList } from '../module/twitter-forwarding'
 import { isUndefined } from 'lodash-es'
 
-type MessageHistory = { digest: string, from: string }
+type MessageHistory = { digest: string; from: string }
 
 const store = {
   chatHistory: {} as Record<
@@ -13,8 +13,18 @@ const store = {
     }
   >,
   twitterForwardingList: [] as Array<typeof twitterForwardingList[0]>,
-  ywwuyiLiveOnline: false,
-  ywwuyiLiveCategory: null as null | string,
+  douyu: {
+    ywwuyiLiveOnline: false,
+    ywwuyiLiveCategory: null as null | string,
+  },
+  bili: {} as Record<
+    number,
+    {
+      wasOnline: boolean
+      lastCategory: null | string
+      lastOnline: Date | null
+    }
+  >,
 }
 
 export const storeMethods = {

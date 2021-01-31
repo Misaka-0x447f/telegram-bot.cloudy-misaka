@@ -2,13 +2,14 @@ import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import bot from './interface/bot'
 
+import './module/bili-live'
 import './module/chat-bridge'
 import './module/get-user-info'
 import './module/ping'
 import './module/say'
 import './module/start'
 import './module/twitter-forwarding'
-import './module/ywwuyi-live'
+import './module/ywwuyi-douyu-live'
 import './module/repeater'
 
 const gracefulStopHandler = () => {

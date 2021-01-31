@@ -46,6 +46,7 @@
     "got": "^11.8.1",
     "json-stringify-safe": "^5.0.1",
     "lodash-es": "^4.17.20",
+    "mem": "^8.0.0",
     "promise-retry": "^2.0.1",
     "regenerator-runtime": "^0.13.7",
     "telegraf": "^3.38.0"

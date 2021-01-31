@@ -1,7 +1,7 @@
 import { fetchRoomStatus } from '../interface/douyu'
 import store from '../store'
 import bot from '../interface/bot'
-import { sleep } from '../utils/lang'
+import { formatMinute, sleep } from '../utils/lang'
 
 const sendMessage = (text: string) =>
   bot.ywwuyi.sendMessage(-1001322798787, text)
@@ -14,27 +14,27 @@ const worker = async () => {
     run()
     return
   }
-  if (res.room.isOnline && !store.ywwuyiLiveOnline) {
+  if (res.room.isOnline && !store.douyu.ywwuyiLiveOnline) {
     await sendMessage(
       `${res.room.liveName}\n昏睡上播`
     )
-  } else if (!res.room.isOnline && store.ywwuyiLiveOnline) {
+  } else if (!res.room.isOnline && store.douyu.ywwuyiLiveOnline) {
     const liveMinutes =
       (res.room.lastOfflineTime.getTime() - res.room.lastOnlineTime.getTime()) /
       60000
     await sendMessage(
-      `已播${Math.floor(liveMinutes / 60)}小时${Math.round(liveMinutes % 60).toString().padStart(2, '0')}分钟`
+      `已播${formatMinute(liveMinutes)}`
     )
     await sleep(20000)
     await sendMessage('zzzzzzzzz')
   } else if (
-    res.room.category !== store.ywwuyiLiveCategory &&
-    store.ywwuyiLiveCategory !== null
+    res.room.category !== store.douyu.ywwuyiLiveCategory &&
+    store.douyu.ywwuyiLiveCategory !== null
   ) {
     await sendMessage(`主播已更换分区为：${res.room.category}`)
   }
-  store.ywwuyiLiveOnline = res.room.isOnline
-  store.ywwuyiLiveCategory = res.room.category
+  store.douyu.ywwuyiLiveOnline = res.room.isOnline
+  store.douyu.ywwuyiLiveCategory = res.room.category
   run()
 }
 
