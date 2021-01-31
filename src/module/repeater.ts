@@ -50,7 +50,7 @@ bot.misaka.message.sub(async ({ ctx, message, currentChat }) => {
     hasSticker +
     hasDocument +
     forwardCounterBonusChance
-  if (rand(0, 100) < chance || sameMessageCount === 1) {
+  if (rand(0, 100) < chance || (sameMessageCount === 1 && chance > 0)) {
     await sleep(rand(2, 5))
     if (message) {
       await ctx.telegram.sendCopy(message.chat.id, message)
