@@ -18,10 +18,8 @@ const configs = [
   {
     id: 6655,
     handler: {
-      online: async ({ title, category }) => {
+      online: async ({ title }) => {
         await sendMessage(`${title}\n昏睡上播`)
-        await sleep(5000)
-        await sendMessage(`主播正在分区：${category}`)
       },
       offline: async ({ lastOnline }) => {
         if (!lastOnline) return

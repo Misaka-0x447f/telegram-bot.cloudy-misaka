@@ -17,6 +17,7 @@ export const twitterForwardingList: Array<{
     from: 'MisakaKumomi',
     to: [
       -1001465692020,
+      -1001158764878,
       1244020370,
       ({ content }) =>
         content.toLowerCase().includes('#arcaea') ? -1001150518332 : null,
