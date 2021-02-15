@@ -20,14 +20,18 @@ const configs = [
     handler: {
       online: ({ title }) => sendMessage(`${title}\n昏睡上播`),
       offline: async ({ lastOnline }) => {
-        if (!lastOnline) return
-        await sendMessage(
-          `已播${formatMinute(
-            (new Date().getTime() - lastOnline.getTime()) / 60000
-          )}`
-        )
-        await sleep(rand(20000, 60000))
-        await sendMessage('zzzzzzzzz')
+        try {
+          if (lastOnline) {
+            await sendMessage(
+                `已播${formatMinute(
+                    (new Date().getTime() - lastOnline?.getTime()) / 60000
+                )}`
+            )
+            await sleep(rand(20000, 60000))
+          }
+        } finally {
+          await sendMessage('zzzzzzzzz')
+        }
       },
       categoryChange: async ({ category }) => {
         await sendMessage(`你爽已更换分区：${category}`)
@@ -52,7 +56,7 @@ const worker = async (config: typeof configs[0]) => {
   const isOnline = res.live_status === 1
 
   if (!store.bili[id]) {
-    store.bili[id] = { wasOnline: false, lastCategory: null, lastOnline: null }
+    store.bili[id] = { wasOnline: false, lastCategory: res.area_name, lastOnline: null }
   }
 
   const info: Parameters<Handler>[0] = {

@@ -49,3 +49,62 @@ export const fetchRoomInfo = async (id: string | number) => {
     tags: string,
   }
 }
+
+export const getVideoDetail = async (searchParams: {aid?: string, bvid?: string}) => got({
+    method: 'GET',
+    url: 'http://api.bilibili.com/x/web-interface/view',
+    searchParams
+  }).json<{
+    code: number,
+    message: string,
+    ttl: number,
+    data?: {
+      bvid: string,
+      aid: number,
+      videos: number,
+      tname: string,
+      pic: string,
+      title: string,
+      pubdate: number,
+      ctime: number,
+      desc: string,
+      state: number,
+      duration: number,
+      rights: {
+        download: 0 | 1
+      },
+      owner: {
+        mid: number,
+        name: string,
+        face: string,
+      },
+      stat: {
+        aid: number,
+        view: number,
+        danmaku: number,
+        reply: number,
+        favourite: number,
+        coin: number,
+        share: number,
+        like: number,
+        dislike: number,
+      },
+      dimension: {
+        width: number,
+        height: number,
+        rotate: number,
+      },
+      pages: Array<{
+        cid: number,
+        page: number,
+        from: string,
+        part: string,
+        duration: number,
+        dimension: {
+          width: number,
+          height: number,
+          rotate: number,
+        }
+      }>
+    }
+  }>()
