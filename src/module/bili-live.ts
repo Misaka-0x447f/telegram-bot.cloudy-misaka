@@ -1,5 +1,5 @@
 import bot from '../interface/bot'
-import { fetchRoomInfo, getLiveIDBySortId } from '../interface/bilibili'
+import { fetchRoomInfo, getLiveIDByShortId } from '../interface/bilibili'
 import store from '../store'
 import { formatMinute, rand, sleep } from '../utils/lang'
 import telemetry from '../utils/telemetry'
@@ -18,9 +18,7 @@ const configs = [
   {
     id: 6655,
     handler: {
-      online: async ({ title }) => {
-        await sendMessage(`${title}\n昏睡上播`)
-      },
+      online: ({ title }) => sendMessage(`${title}\n昏睡上播`),
       offline: async ({ lastOnline }) => {
         if (!lastOnline) return
         await sendMessage(
@@ -47,7 +45,7 @@ const worker = async (config: typeof configs[0]) => {
   let id = config.id
   // 短号查询长号
   if (id < 10000) {
-    id = await getLiveIDBySortId(id)
+    id = await getLiveIDByShortId(id)
   }
 
   const res = await fetchRoomInfo(id)
@@ -65,8 +63,10 @@ const worker = async (config: typeof configs[0]) => {
   }
 
   if (isOnline && !store.bili[id]?.wasOnline) {
+    console.log('[bili-live] running online hook')
     await config.handler?.online?.(info)
   } else if (!isOnline && store.bili[id]?.wasOnline) {
+    console.log('[bili-live] running offline hook')
     await config.handler?.offline?.(info)
   }
 
@@ -84,10 +84,11 @@ const worker = async (config: typeof configs[0]) => {
   store.bili[id].lastCategory = res.area_name
 }
 
-const run = async (config: typeof configs[0]) => {
+const run = (config: typeof configs[0]): any =>
   worker(config)
     .catch((e) => telemetry(`获取 ${config.id} 信息时发生错误`, e))
     .finally(() => setTimeout(() => run(config), config.interval))
-}
 
 configs.forEach(run)
+
+console.log('bili-live ready.')
