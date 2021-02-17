@@ -38,7 +38,7 @@ export const fetchRoomInfo = async (id: string | number) => {
     ...res,
     live_time: new Date(
       res.live_time.replace(' ', 'T') + '+08:00'
-    ).toUTCString(),
+    ),
   } as {
     live_status: 0 | 1 | 2  // 2: 轮播
     parent_area_name: string // 分区名

@@ -15,7 +15,7 @@ export default {
 
   plugins: [
     // Allows node_modules resolution
-    resolve({ extensions }),
+    resolve({ extensions, preferBuiltins: true }),
 
     json(),
 

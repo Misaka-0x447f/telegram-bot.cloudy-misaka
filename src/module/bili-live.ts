@@ -24,7 +24,7 @@ const configs = [
           if (lastOnline) {
             await sendMessage(
                 `已播${formatMinute(
-                    (new Date().getTime() - lastOnline?.getTime()) / 60000
+                    (new Date().getTime() - lastOnline?.getTime?.()) / 60000
                 )}`
             )
             await sleep(rand(20000, 60000))
@@ -67,10 +67,10 @@ const worker = async (config: typeof configs[0]) => {
   }
 
   if (isOnline && !store.bili[id]?.wasOnline) {
-    console.log('[bili-live] running online hook')
+    telemetry('[bili-live] running online hook')
     await config.handler?.online?.(info)
   } else if (!isOnline && store.bili[id]?.wasOnline) {
-    console.log('[bili-live] running offline hook')
+    telemetry('[bili-live] running offline hook')
     await config.handler?.offline?.(info)
   }
 
@@ -90,7 +90,6 @@ const worker = async (config: typeof configs[0]) => {
 
 const run = (config: typeof configs[0]): any =>
   worker(config)
-    .catch((e) => telemetry(`获取 ${config.id} 信息时发生错误`, e))
     .finally(() => setTimeout(() => run(config), config.interval))
 
 configs.forEach(run)
