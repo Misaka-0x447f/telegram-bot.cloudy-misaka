@@ -5,11 +5,12 @@ import * as tt from 'telegraf/typings/telegram-types'
 import promiseRetry from 'promise-retry'
 import { Message } from 'telegram-typings'
 
-type BotName = 'misaka' | 'ywwuyi'
+type BotName = 'misaka' | 'ywwuyi' | 'strawberry960'
 
 const botList: Array<{ name: BotName; token: string }> = [
   { name: 'misaka', token: 'TELEGRAM_BOT_TOKEN' },
   { name: 'ywwuyi', token: 'TELEGRAM_BOT_TOKEN_YWWUYI' },
+  { name: 'strawberry960', token: 'TELEGRAM_BOT_TOKEN_STRAWBERRY960' },
 ]
 
 let hasError = false
@@ -61,11 +62,10 @@ const botFactory = (el: typeof bots[0]) => {
       return
     }
     const commandMatchArray =
-        (message.chat.type === 'private' &&
-            message.text?.match(/^\/(\w+).*$/)) ||
-        message.text?.match(
-            new RegExp(`^\\/(\\w+).*@${el.instance.options.username}$`)
-        )
+      (message.chat.type === 'private' && message.text?.match(/^\/(\w+).*$/)) ||
+      message.text?.match(
+        new RegExp(`^\\/(\\w+).*@${el.instance.options.username}$`)
+      )
 
     if (commandMatchArray) {
       eventBus.command.dispatch({
@@ -73,9 +73,9 @@ const botFactory = (el: typeof bots[0]) => {
         meta: {
           commandName: commandMatchArray[1],
           args: message
-              .text!.match(/\/\w+(?:\s?@\w+)?(.*)/)![1]
-              .trim()
-              .split(' '),
+            .text!.match(/\/\w+(?:\s?@\w+)?(.*)/)![1]
+            .trim()
+            .split(' '),
         },
       })
     }
@@ -92,10 +92,10 @@ const botFactory = (el: typeof bots[0]) => {
   return {
     ...eventBus,
     bot: el.instance,
-    sendMessage: (chatId: number, text: string) =>
-        promiseRetry((retry) =>
-            el.instance.telegram.sendMessage(chatId, text).catch(retry)
-        ),
+    sendMessage: (chatId: number, text: string, extra?: tt.ExtraEditMessage) =>
+      promiseRetry((retry) =>
+        el.instance.telegram.sendMessage(chatId, text, extra).catch(retry)
+      ),
   }
 }
 
