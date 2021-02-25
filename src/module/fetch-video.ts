@@ -1,6 +1,7 @@
 import bot from '../interface/bot'
 import { getVideoDetail } from '../interface/bilibili'
 import { ExtractPromise } from '../utils/type'
+import errorMessages from '../utils/errorMessages'
 
 const biliVideoDetailAdapter = (
   src: ExtractPromise<ReturnType<typeof getVideoDetail>>
@@ -28,9 +29,14 @@ const biliVideoDetailAdapter = (
 
 bot.misaka.command.sub(async ({ ctx, meta }) => {
   if (meta.commandName !== 'fetch_video' || !ctx.chat?.id) return
+  const reply = ctx.message?.reply_to_message
+  if (!reply?.text) {
+    await ctx.telegram.sendMessage(ctx.chat?.id, errorMessages.tooFewArguments(1, 0))
+    return
+  }
   const biliRegex = /([ab]v)(.*)/im
-  if (meta.args[0].match(biliRegex)) {
-    const result = meta.args[0].match(biliRegex)!
+  if (reply.text.match(biliRegex)) {
+    const result = reply.text.match(biliRegex)!
     const isAv = result[1].toLowerCase() === 'av'
     const res = await getVideoDetail(
       isAv ? { aid: result[2] } : { bvid: result[2] }
@@ -40,7 +46,10 @@ bot.misaka.command.sub(async ({ ctx, meta }) => {
   }
   await ctx.telegram.sendMessage(
     ctx.chat?.id,
-    '指令无效。目前支持根据 av 号或 bv 号获取视频信息，例如：/fetch_video av39092411'
+    errorMessages.unexpectedArguments([{
+      name: 'videoId',
+      acceptable: 'av 号或 bv 号。例如：av39092411'
+    }])
   )
 })
 

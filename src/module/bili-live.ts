@@ -18,14 +18,15 @@ const configs = [
   {
     id: 6655,
     handler: {
-      online: ({ title }) => sendMessage(`${title}\n昏睡上播`),
+      online: ({ title }) =>
+        sendMessage(`${title}\n昏睡上播\nhttps://live.bilibili.com/6655`),
       offline: async ({ lastOnline }) => {
         try {
           if (lastOnline) {
             await sendMessage(
-                `已播${formatMinute(
-                    (new Date().getTime() - lastOnline?.getTime?.()) / 60000
-                )}`
+              `已播${formatMinute(
+                (new Date().getTime() - lastOnline?.getTime?.()) / 60000
+              )}`
             )
             await sleep(rand(20000, 60000))
           }
@@ -56,7 +57,11 @@ const worker = async (config: typeof configs[0]) => {
   const isOnline = res.live_status === 1
 
   if (!store.bili[id]) {
-    store.bili[id] = { wasOnline: false, lastCategory: res.area_name, lastOnline: null }
+    store.bili[id] = {
+      wasOnline: false,
+      lastCategory: res.area_name,
+      lastOnline: null,
+    }
   }
 
   const info: Parameters<Handler>[0] = {
@@ -89,8 +94,7 @@ const worker = async (config: typeof configs[0]) => {
 }
 
 const run = (config: typeof configs[0]): any =>
-  worker(config)
-    .finally(() => setTimeout(() => run(config), config.interval))
+  worker(config).finally(() => setTimeout(() => run(config), config.interval))
 
 configs.forEach(run)
 

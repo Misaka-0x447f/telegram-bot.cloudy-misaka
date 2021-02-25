@@ -5,7 +5,7 @@ import register from '../register'
 import bot from '../interface/bot'
 
 export default (...log: any[]) => {
-  let res = '发生了错误。\n'
+  let res = ''
   log.forEach((el) => {
     if (isString(el)) {
       res = res.concat(el).concat('\n')
