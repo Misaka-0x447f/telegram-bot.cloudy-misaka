@@ -25,4 +25,3 @@ bot.misaka.message.sub(async ({ ctx, message }) => {
   }
 })
 
-console.log('chat-bridge ready.')

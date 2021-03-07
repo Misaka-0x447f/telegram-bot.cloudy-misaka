@@ -44,11 +44,11 @@ const eventBusFactory = () => ({
     ctx: TelegrafContext
     message: NonNullable<Message>
     currentChat: tt.Chat
-    meta: { isCommand: boolean }
+    meta: { isCommand: boolean, chatId: number }
   }>(),
   command: TypedEvent<{
     ctx: TelegrafContext
-    meta: { commandName: string; args: string[] }
+    meta: { commandName: string; args: string[], chatId: number }
   }>(),
 })
 
@@ -72,6 +72,7 @@ const botFactory = (el: typeof bots[0]) => {
         ctx,
         meta: {
           commandName: commandMatchArray[1],
+          chatId: message.chat.id,
           args: message
             .text!.match(/\/\w+(?:\s?@\w+)?(.*)/)![1]
             .trim()
@@ -84,6 +85,7 @@ const botFactory = (el: typeof bots[0]) => {
       message,
       currentChat,
       meta: {
+        chatId: message.chat.id,
         isCommand: !!commandMatchArray,
       },
     })

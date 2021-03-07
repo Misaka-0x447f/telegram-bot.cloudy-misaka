@@ -52,5 +52,3 @@ bot.misaka.command.sub(async ({ ctx, meta }) => {
     }])
   )
 })
-
-console.log('fetch-video loaded.')

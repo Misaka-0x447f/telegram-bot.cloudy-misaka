@@ -79,5 +79,3 @@ export const twitterForwardingList: Array<{
   }
   await main()
 })()
-
-console.log('twitter-forwarding ready.')

@@ -10,4 +10,6 @@ LARK_BOT_SECRET_YWWUYI: "mbQYholKpW2kBvaklZ3XKNUCFHHbunpE",
 ```
 npm i
 npm start
+# dwebp required libs
+sudo apt-get install libjpeg-dev libpng-dev libtiff-dev libgif-dev
 ```

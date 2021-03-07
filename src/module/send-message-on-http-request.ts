@@ -85,5 +85,3 @@ const server = http.createServer((req, res) => {
 })
 
 server.listen('17536', () => console.log('listening port 17536.'))
-
-console.log('send-message-on-http-request ready.')

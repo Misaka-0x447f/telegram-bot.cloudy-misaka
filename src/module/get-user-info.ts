@@ -20,5 +20,3 @@ config.forEach((el) =>
       .then()
   })
 )
-
-console.log('get-user-info ready.')

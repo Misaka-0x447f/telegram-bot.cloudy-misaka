@@ -48,5 +48,3 @@ const handler = () => {
 }
 
 handler()
-
-console.log('send-message ready.')

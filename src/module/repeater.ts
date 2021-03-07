@@ -88,5 +88,3 @@ bot.misaka.message.sub(async ({ ctx, message, currentChat }) => {
     })
   ).then()
 })
-
-console.log('repeater ready.')

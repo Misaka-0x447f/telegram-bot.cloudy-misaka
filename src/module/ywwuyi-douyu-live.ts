@@ -39,5 +39,3 @@ const worker = async () => {
 }
 
 worker().then()
-
-console.log('ywwuyi-live ready.')

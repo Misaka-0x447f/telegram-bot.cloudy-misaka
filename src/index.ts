@@ -4,6 +4,7 @@ import bot from './interface/bot'
 
 import './module/bili-live'
 import './module/chat-bridge'
+import './module/fetch-sticker'
 import './module/fetch-video'
 import './module/get-user-info'
 import './module/ping'

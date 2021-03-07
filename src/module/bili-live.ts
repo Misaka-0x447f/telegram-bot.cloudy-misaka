@@ -97,5 +97,3 @@ const run = (config: typeof configs[0]): any =>
   worker(config).finally(() => setTimeout(() => run(config), config.interval))
 
 configs.forEach(run)
-
-console.log('bili-live ready.')
