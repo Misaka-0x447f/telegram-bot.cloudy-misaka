@@ -1,5 +1,5 @@
 import { getTweetTimelineById, getUserByUsername } from '../interface/twitter'
-import store from '../store'
+import store from '../store/runtime'
 import telemetry from '../utils/telemetry'
 import { HTTPError } from 'got'
 import bot from '../interface/bot'

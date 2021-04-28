@@ -1,6 +1,6 @@
 import bot from '../interface/bot'
 import { fetchRoomInfo, getLiveIDByShortId } from '../interface/bilibili'
-import store from '../store'
+import store from '../store/runtime'
 import { formatMinute, rand, sleep } from '../utils/lang'
 import telemetry from '../utils/telemetry'
 

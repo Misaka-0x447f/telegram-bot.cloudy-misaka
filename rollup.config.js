@@ -40,6 +40,7 @@ export default {
     {
       file: pkg.main,
       format: 'cjs',
+      inlineDynamicImports: true,
     },
   ],
 }

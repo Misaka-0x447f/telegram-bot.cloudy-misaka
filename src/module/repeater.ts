@@ -1,5 +1,5 @@
 import bot from '../interface/bot'
-import store, { storeMethods } from '../store'
+import store, { storeMethods } from '../store/runtime'
 import { rand, sleep } from '../utils/lang'
 import promiseRetry from 'promise-retry'
 import { Message } from 'telegram-typings'

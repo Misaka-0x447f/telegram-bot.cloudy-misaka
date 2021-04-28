@@ -1,5 +1,5 @@
 import { fetchRoomStatus } from '../interface/douyu'
-import store from '../store'
+import store from '../store/runtime'
 import bot from '../interface/bot'
 import { formatMinute, sleep } from '../utils/lang'
 
