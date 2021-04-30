@@ -16,12 +16,17 @@ export const twitterForwardingList: Array<{
     operator: bot.misaka,
     from: 'MisakaKumomi',
     to: [
-      -1001465692020,
+      -1001391252674,
       -1001158764878,
-      1244020370,
       ({ content }) =>
         content.toLowerCase().includes('#arcaea') ? -1001150518332 : null,
     ],
+    options: { excludeReplies: true },
+  },
+  {
+    operator: bot.strawberry960,
+    from: 'strawberry960',
+    to: [-1001391252674],
     options: { excludeReplies: true },
   },
   {
@@ -75,7 +80,10 @@ export const twitterForwardingList: Array<{
     if (startTime) {
       await worker(startTime, now)
     }
-    setTimeout(() => main(new Date(new Date(now).getTime() + 1000)), twitterForwardingList.length * 15000)
+    setTimeout(
+      () => main(new Date(new Date(now).getTime() + 1000)),
+      twitterForwardingList.length * 15000
+    )
   }
   await main()
 })()
