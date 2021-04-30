@@ -4,23 +4,11 @@ import TypedEvent from '../utils/TypedEvent'
 import * as tt from 'telegraf/typings/telegram-types'
 import promiseRetry from 'promise-retry'
 import { Message } from 'telegram-typings'
+import persistConfig from '../utils/persistConfig'
 
 type BotName = 'misaka' | 'ywwuyi' | 'strawberry960'
 
-const botList: Array<{ name: BotName; token: string }> = [
-  { name: 'misaka', token: 'TELEGRAM_BOT_TOKEN' },
-  { name: 'ywwuyi', token: 'TELEGRAM_BOT_TOKEN_YWWUYI' },
-  { name: 'strawberry960', token: 'TELEGRAM_BOT_TOKEN_STRAWBERRY960' },
-]
-
-let hasError = false
-for (const bot of botList) {
-  if (!process.env[bot.token]) {
-    hasError = true
-    console.error(`Env [${bot.token}] was not set. Exiting.`)
-  }
-}
-if (hasError) process.exit(1)
+const botList: Array<{ name: BotName; token: string }> = persistConfig.data['config.json'].bots as any
 
 const bots = botList.map((el) => ({
   ...el,

@@ -6,25 +6,48 @@ const secret = process.env.AZURE_SECRET
 if (!secret)
   throw new Error('Azure Storage Account Connection String is Required.')
 
-const configFile = './bot-config.json'
+enum configFilesType {
+  'config.json'
+}
+
+const configFiles = Object.keys(configFilesType)
 const containerName = 'default'
 const containerClient = BlobServiceClient.fromConnectionString(
   secret
 ).getContainerClient(containerName)
-const blobClient = containerClient.getBlobClient(configFile)
-const blockBlobClient = containerClient.getBlockBlobClient(configFile)
+const blobClients = configFiles.map((el) => ({
+  client: containerClient.getBlobClient(el),
+  fileName: el,
+}))
+const blockBlobClients = configFiles.map((el) => ({
+  client: containerClient.getBlockBlobClient(el),
+  fileName: el,
+}))
 
-const data: { value: Record<string, any> } = { value: {} }
-const _upload = debounce(() => blockBlobClient.uploadFile(configFile), 120000)
+const data: { value: Record<keyof typeof configFilesType, Record<string, string | number>> } = { value: {} as any }
+const _upload = debounce(
+  async () =>
+    Promise.all(
+      blockBlobClients.map(async (el) =>
+        el.client.uploadFile((await fsj.readAsync(el.fileName))!)
+      )
+    ),
+  120000
+)
 
 export default {
   init: async () => {
-    if (fsj.exists(configFile)) {
-      data.value = fsj.read(configFile, 'json')
+    if (configFiles.every((el) => fsj.exists(el))) {
+      data.value = Object.fromEntries(
+        configFiles.map((el) => [el, fsj.read(el, 'json')])
+      ) as any
       return
     }
-    const fileStream = await blobClient.download()
-    fsj.write(configFile, fileStream)
+    await Promise.all(
+      blobClients.map(async (el) =>
+        fsj.write(el.fileName, await el.client.download())
+      )
+    )
   },
   get data() {
     return data.value
