@@ -1,5 +1,5 @@
 import promiseRetry from 'promise-retry'
-import bot from '../interface/bot'
+import bot from '../interface/telegram'
 
 const list = [
   {

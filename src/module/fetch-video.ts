@@ -1,4 +1,4 @@
-import bot from '../interface/bot'
+import bot from '../interface/telegram'
 import { getVideoDetail } from '../interface/bilibili'
 import { ExtractPromise } from '../utils/type'
 import errorMessages from '../utils/errorMessages'

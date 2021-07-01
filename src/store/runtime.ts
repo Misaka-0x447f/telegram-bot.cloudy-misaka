@@ -18,7 +18,7 @@ const store = {
     ywwuyiLiveCategory: null as null | string,
   },
   bili: {} as Record<
-    number,
+    string,
     {
       wasOnline: boolean
       lastCategory: null | string

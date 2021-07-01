@@ -1,4 +1,4 @@
-import bot from '../interface/bot'
+import bot from '../interface/telegram'
 import store, { storeMethods } from '../store/runtime'
 import { rand, sleep } from '../utils/lang'
 import promiseRetry from 'promise-retry'

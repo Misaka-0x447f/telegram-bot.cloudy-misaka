@@ -2,9 +2,9 @@ import { isString } from 'lodash-es'
 import { stringify } from './lang'
 import promiseRetry from 'promise-retry'
 import register from '../register'
-import bot from '../interface/bot'
+import bot from '../interface/telegram'
 
-export default (...log: any[]) => {
+export default async (...log: any[]) => {
   let res = ''
   log.forEach((el) => {
     if (isString(el)) {
@@ -13,12 +13,15 @@ export default (...log: any[]) => {
       res = res.concat(stringify(el)).concat('\n')
     }
   })
-  register.sendAlertToTelegramAccount.forEach((target) => {
-    promiseRetry(
-      (retry) => bot.misaka.bot.telegram.sendMessage(target, res).catch(retry),
-      {
-        retries: 3,
-      }
-    ).then()
-  })
+  return Promise.all(
+    register.sendAlertToTelegramAccount.map((target) =>
+      promiseRetry(
+        (retry) =>
+          bot.misaka.bot.telegram.sendMessage(target, res).catch(retry),
+        {
+          retries: 3,
+        }
+      ).then()
+    )
+  )
 }

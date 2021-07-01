@@ -1,9 +1,10 @@
 /* eslint-disable camelcase */
 import got from 'got'
 import telemetry from '../utils/telemetry'
+import persistConfig from "../utils/persistConfig";
 
-const appId = 'cli_9e9bf61428af1101'
-const appSecret = process.env.LARK_BOT_SECRET_YWWUYI
+const appId = persistConfig.entries.master.tokenLark.id
+const appSecret = persistConfig.entries.master.tokenLark.token
 
 const fetchBearerToken = async () => {
   const res = (await got

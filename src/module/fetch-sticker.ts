@@ -1,4 +1,4 @@
-import bot, { BotType } from '../interface/bot'
+import bot, { BotType } from '../interface/telegram'
 import errorMessages from '../utils/errorMessages'
 // import * as os from 'os'
 // import { download } from '../utils/file'

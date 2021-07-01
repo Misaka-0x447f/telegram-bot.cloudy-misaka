@@ -1,6 +1,6 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
-import bot from './interface/bot'
+import bot from './interface/telegram'
 import persistConfig from './utils/persistConfig'
 
 (async () => {
@@ -15,7 +15,7 @@ import persistConfig from './utils/persistConfig'
   import('./module/send-message-on-http-request')
   import('./module/start')
   import('./module/twitter-forwarding')
-  import('./module/ywwuyi-douyu-live')
+  import('./module/legacy/ywwuyi-douyu-live')
   import('./module/repeater')
 })()
 

@@ -1,5 +1,4 @@
 import promiseRetry from 'promise-retry'
-import bot from '../interface/bot'
 
 bot.misaka.message.sub(async ({ ctx, message, currentChat }) => {
   const isPing =

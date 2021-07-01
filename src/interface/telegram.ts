@@ -4,11 +4,14 @@ import TypedEvent from '../utils/TypedEvent'
 import * as tt from 'telegraf/typings/telegram-types'
 import promiseRetry from 'promise-retry'
 import { Message } from 'telegram-typings'
-import persistConfig from '../utils/persistConfig'
+import persistConfig, { Actions } from '../utils/persistConfig'
+import { sleep } from '../utils/lang'
+import telemetry from '../utils/telemetry'
 
-type BotName = 'misaka' | 'ywwuyi' | 'strawberry960'
+export type TelegramBotName = 'misaka' | 'ywwuyi' | 'strawberry960'
 
-const botList: Array<{ name: BotName; token: string }> = persistConfig.data['config.json'].bots as any
+const botList: Array<{ name: TelegramBotName; token: string }> = persistConfig
+  .entries.master.tokenTelegram as any
 
 const bots = botList.map((el) => ({
   ...el,
@@ -32,11 +35,11 @@ const eventBusFactory = () => ({
     ctx: TelegrafContext
     message: NonNullable<Message>
     currentChat: tt.Chat
-    meta: { isCommand: boolean, chatId: number }
+    meta: { isCommand: boolean; chatId: number }
   }>(),
   command: TypedEvent<{
     ctx: TelegrafContext
-    meta: { commandName: string; args: string[], chatId: number }
+    meta: { commandName: string; args: string[]; chatId: number }
   }>(),
 })
 
@@ -79,19 +82,69 @@ const botFactory = (el: typeof bots[0]) => {
     })
   })
 
+  const sendMessage = (
+    chatId: number,
+    text: string,
+    extra?: tt.ExtraEditMessage
+  ) =>
+    promiseRetry((retry) =>
+      el.instance.telegram.sendMessage(chatId, text, extra).catch(retry)
+    )
+
   return {
     ...eventBus,
     bot: el.instance,
-    sendMessage: (chatId: number, text: string, extra?: tt.ExtraEditMessage) =>
-      promiseRetry((retry) =>
-        el.instance.telegram.sendMessage(chatId, text, extra).catch(retry)
+    sendMessage,
+    runActions: (
+      actions: Actions,
+      options: { defaultChatId?: number } = {},
+      params: Record<string, string | number | undefined> = {}
+    ) =>
+      // await all actions done
+      Promise.all(
+        // convert actions to promises
+        actions.map((action) =>
+          // an action promise.
+          action.forEach((step) => {
+            const chatId = step.dest || options.defaultChatId
+            if (!chatId)
+              return telemetry(
+                `AssertionError: ChatId was not defined with step ${JSON.stringify(
+                  step
+                )}`
+              )
+            if (step.type === 'message')
+              return sendMessage(
+                chatId,
+                step.text.replaceAll(/\${(.*?)}/g, (_, name) =>
+                  params[name]?.toString() || '<nil>'
+                )
+              )
+            if (step.type === 'sleep') return sleep(step.time)
+            if (step.type === 'messageByForward')
+              return promiseRetry((retry) =>
+                el.instance.telegram
+                  .forwardMessage(
+                    chatId,
+                    step.source,
+                    step.messageId
+                  )
+                  .catch(retry)
+              )
+            const errorMsg = `AssertionError: type ${
+              // @ts-ignore
+              step.type
+            } was not defined with step ${JSON.stringify(step)}`
+            return sendMessage(chatId, errorMsg)
+          })
+        )
       ),
   }
 }
 
 export type BotType = ReturnType<typeof botFactory>
 
-export const exportBot = {} as Record<BotName, BotType>
+export const exportBot = {} as Record<TelegramBotName, BotType>
 
 bots.forEach((el) => {
   exportBot[el.name] = botFactory(el)

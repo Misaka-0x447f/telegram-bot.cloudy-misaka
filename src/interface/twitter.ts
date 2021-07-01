@@ -1,9 +1,6 @@
 /* eslint-disable camelcase */
 import got, { CancelableRequest } from 'got'
-
-if (!process.env.TWITTER_BEARER_TOKEN) {
-  throw new Error('Env [TWITTER_BEARER_TOKEN] was not set. Exiting.')
-}
+import persistConfig from "../utils/persistConfig";
 
 type TwitterErrors = Array<{ title: string; detail: string; type: string }>
 
@@ -20,7 +17,7 @@ const toTwitterTime = (time?: Date) => {
 }
 
 const authHeader = () => ({
-  Authorization: `Bearer ${process.env.TWITTER_BEARER_TOKEN}`,
+  Authorization: `Bearer ${persistConfig.entries.master.tokenTwitter}`,
 })
 
 export const getUserByUsername = (username: string) =>

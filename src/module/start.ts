@@ -1,4 +1,4 @@
-import bot from '../interface/bot'
+import bot from '../interface/telegram'
 import { rand, sleep } from '../utils/lang'
 
 bot.misaka.command.sub(async ({ ctx, meta }) => {

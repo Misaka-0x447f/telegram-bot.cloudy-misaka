@@ -1,4 +1,4 @@
-import bot from '../interface/bot'
+import bot from '../interface/telegram'
 
 const config = [{ worker: bot.misaka }, { worker: bot.strawberry960 }]
 

@@ -1,4 +1,4 @@
-import bot from '../interface/bot'
+import bot from '../interface/telegram'
 import register from '../register'
 
 const contactConfigs = [

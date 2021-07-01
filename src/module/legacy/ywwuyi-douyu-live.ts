@@ -1,7 +1,7 @@
-import { fetchRoomStatus } from '../interface/douyu'
-import store from '../store/runtime'
-import bot from '../interface/bot'
-import { formatMinute, sleep } from '../utils/lang'
+import { fetchRoomStatus } from '../../interface/douyu'
+import store from '../../store/runtime'
+import bot from '../../interface/telegram'
+import { formatMinute, sleep } from '../../utils/lang'
 
 const sendMessage = (text: string) =>
   bot.ywwuyi.sendMessage(-1001322798787, text)
