@@ -38,9 +38,9 @@ bot.misaka.message.sub(async ({ ctx, message, currentChat }) => {
       ? -100
       : messageLengthBonusDef[messageLength] || 0
   const hasPhoto = ctx.message?.photo ? -100 : 0
-  const hasSticker = ctx.message?.sticker ? 2 : 0
+  const hasSticker = ctx.message?.sticker ? -100 : 0
   const hasDocument = ctx.message?.document ? -100 : 0
-  const forwardCounterBonus = [2, 1.5, 0.9, 0.4, 0]
+  const forwardCounterBonus = [1.5, 1, 0.6, 0.3, 0]
   const forwardCounterBonusChance =
     (5 - messageLength) *
     (forwardCounterBonus[store.chatHistory[chatId].nonRepeatCounter] || 0)
