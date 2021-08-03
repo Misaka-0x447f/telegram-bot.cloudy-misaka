@@ -40,6 +40,9 @@ const data: {
   value: {
     master: {
       proxy?: string
+      insight: {
+        telegramSupervisor: number[]
+      },
       tokenTelegram: Array<{ name: TelegramBotName; token: string }>
       tokenTwitter: string
       biliLive: Record<
@@ -63,7 +66,8 @@ const data: {
           list: Array<{
             name: string
             id: number
-          }>
+          }>,
+          allowUser?: number[]
         }
       >
       start: Record<TelegramBotName, Record<'actions', Actions>>

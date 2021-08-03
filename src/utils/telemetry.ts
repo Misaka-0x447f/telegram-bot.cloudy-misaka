@@ -1,8 +1,8 @@
 import { isString } from 'lodash-es'
 import { stringify } from './lang'
 import promiseRetry from 'promise-retry'
-import register from '../register'
 import bot from '../interface/telegram'
+import configFile from "./configFile";
 
 export default async (...log: any[]) => {
   let res = ''
@@ -14,7 +14,7 @@ export default async (...log: any[]) => {
     }
   })
   return Promise.all(
-    register.sendAlertToTelegramAccount.map((target) =>
+    configFile.entries.master.insight.telegramSupervisor.map((target) =>
       promiseRetry(
         (retry) =>
           bot.misaka.bot.telegram.sendMessage(target, res).catch(retry),
