@@ -4,18 +4,25 @@ import TypedEvent from '../utils/TypedEvent'
 import * as tt from 'telegraf/typings/telegram-types'
 import promiseRetry from 'promise-retry'
 import { Message } from 'telegram-typings'
-import persistConfig, { Actions } from '../utils/persistConfig'
+import persistConfig, { Actions } from '../utils/configFile'
 import { sleep } from '../utils/lang'
 import telemetry from '../utils/telemetry'
-
-export type TelegramBotName = 'misaka' | 'ywwuyi' | 'strawberry960'
+import { TelegramBotName } from '../utils/type'
+import HttpsProxyAgent from 'https-proxy-agent'
 
 const botList: Array<{ name: TelegramBotName; token: string }> = persistConfig
   .entries.master.tokenTelegram as any
 
+// @ts-ignore
+const agent = persistConfig.entries.master.proxy ? new HttpsProxyAgent(persistConfig.entries.master.proxy) : undefined
+
 const bots = botList.map((el) => ({
   ...el,
-  instance: new Telegraf(process.env[el.token]!),
+  instance: new Telegraf(el.token, {
+    telegram: {
+      agent
+    }
+  }),
 }))
 
 // username enables receiving group message. https://github.com/telegraf/telegraf/issues/134
@@ -95,50 +102,55 @@ const botFactory = (el: typeof bots[0]) => {
     ...eventBus,
     bot: el.instance,
     sendMessage,
+    self: {
+      username: el.instance.options.username!
+    },
     runActions: (
       actions: Actions,
-      options: { defaultChatId?: number } = {},
+      options: { defaultChatId: number },
       params: Record<string, string | number | undefined> = {}
-    ) =>
-      // await all actions done
-      Promise.all(
-        // convert actions to promises
-        actions.map((action) =>
-          // an action promise.
-          action.forEach((step) => {
-            const chatId = step.dest || options.defaultChatId
-            if (!chatId)
-              return telemetry(
-                `AssertionError: ChatId was not defined with step ${JSON.stringify(
-                  step
-                )}`
+    ) => {
+      // convert actions to promises
+      const promises = actions.map((action) => async () => {
+        // group of action.
+        for (const step of action) {
+          const chatId = step.dest || options.defaultChatId
+          if (!chatId)
+            await telemetry(
+              `AssertionError: ChatId was not defined with step ${JSON.stringify(
+                step
+              )}`
+            )
+          else if (step.type === 'message')
+            await sendMessage(
+              chatId,
+              step.text.replaceAll(/\${(.*?)}/g, (_, name) =>
+                params[name]?.toString() || `<${name}=nil>`
               )
-            if (step.type === 'message')
-              return sendMessage(
-                chatId,
-                step.text.replaceAll(/\${(.*?)}/g, (_, name) =>
-                  params[name]?.toString() || '<nil>'
+            )
+          else if (step.type === 'sleep') await sleep(step.time)
+          else if (step.type === 'messageByForward')
+            await promiseRetry((retry) =>
+              el.instance.telegram
+                .forwardMessage(
+                  chatId,
+                  step.source,
+                  step.messageId
                 )
-              )
-            if (step.type === 'sleep') return sleep(step.time)
-            if (step.type === 'messageByForward')
-              return promiseRetry((retry) =>
-                el.instance.telegram
-                  .forwardMessage(
-                    chatId,
-                    step.source,
-                    step.messageId
-                  )
-                  .catch(retry)
-              )
+                .catch(retry)
+            )
+          else {
             const errorMsg = `AssertionError: type ${
               // @ts-ignore
               step.type
             } was not defined with step ${JSON.stringify(step)}`
-            return sendMessage(chatId, errorMsg)
-          })
-        )
-      ),
+            await sendMessage(chatId, errorMsg)
+          }
+        }
+      })
+      // await all actions done
+      return Promise.all(promises.map(el => el())).then()
+    }
   }
 }
 

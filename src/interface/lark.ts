@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 import got from 'got'
 import telemetry from '../utils/telemetry'
-import persistConfig from "../utils/persistConfig";
+import persistConfig from "../utils/configFile";
 
 const appId = persistConfig.entries.master.tokenLark.id
 const appSecret = persistConfig.entries.master.tokenLark.token

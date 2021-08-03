@@ -1,9 +1,10 @@
-import telegram, { TelegramBotName } from '../interface/telegram'
+import telegram from '../interface/telegram'
 import { fetchRoomInfo, getLiveIDByShortId } from '../interface/bilibili'
 import store from '../store/runtime'
 import telemetry from '../utils/telemetry'
-import persistConfig from '../utils/persistConfig'
+import persistConfig from '../utils/configFile'
 import { formatMinute, isNumeric } from '../utils/lang'
+import { TelegramBotName } from "../utils/type";
 
 const configs = persistConfig.entries.master.biliLive
 

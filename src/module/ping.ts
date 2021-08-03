@@ -1,24 +1,17 @@
-import promiseRetry from 'promise-retry'
+import persistConfig from "../utils/configFile";
+import telegram from "../interface/telegram";
+import { TelegramBotName } from "../utils/type";
 
-bot.misaka.message.sub(async ({ ctx, message, currentChat }) => {
-  const isPing =
-    (message.text?.includes('/ping') && message.chat.type === 'private') ||
-    (message.text?.includes('/ping@Misaka_0x447f_bot') &&
-      message.chat.type !== 'private')
-  if (isPing) {
-    promiseRetry(
-      (retry, number) =>
-        ctx.telegram
-          .sendMessage(
-            currentChat.id,
-            `Alive until sunset. \n${new Date().toUTCString()}`
-          )
-          .catch((e) => {
-            retry(e)
-            console.log(e)
-            console.log(`Attempting to retry ${number}`)
-          }),
-      { maxRetryTime: 10000 }
-    ).then()
-  }
-})
+const configs = persistConfig.entries.master.ping
+
+for (const [botName, config] of Object.entries(configs)) {
+  const bot = telegram[botName as TelegramBotName]
+  bot.message.sub(async ({ message, currentChat}) => {
+    const isPing =
+      (message.text?.includes('/ping') && message.chat.type === 'private') ||
+      (message.text?.includes(`/ping@${bot.self.username}`) &&
+        message.chat.type !== 'private')
+    if (!isPing) return
+    bot.runActions(config.actions, {defaultChatId: currentChat.id}, {utcDate: new Date().toUTCString()}).then()
+  })
+}

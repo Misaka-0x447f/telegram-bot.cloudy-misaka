@@ -1,36 +1,13 @@
-import { BlobServiceClient } from '@azure/storage-blob'
-import { TelegramBotName } from '../interface/telegram'
+/**
+ * This file is meant to be read config from some remote, but for now it only read config from local.
+ */
 
-const secret = process.env.AZURE_SECRET
-if (!secret)
-  throw new Error('Azure Storage Account Connection String is Required.')
+import { TelegramBotName } from "./type";
+import fsj from 'fs-jetpack'
 
 enum configFilesType {
   'master',
 }
-
-const configFiles = Object.keys(configFilesType)
-const containerName = 'default'
-const containerClient =
-  BlobServiceClient.fromConnectionString(secret).getContainerClient(
-    containerName
-  )
-const blobClients = configFiles.map((el) => ({
-  client: containerClient.getBlobClient(el),
-  fileName: `${el}.json`,
-}))
-
-const streamToString = async (readableStream: any): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const chunks: Buffer[] = []
-    readableStream.on('data', (data: any) => {
-      chunks.push(data instanceof Buffer ? data : Buffer.from(data))
-    })
-    readableStream.on('end', () => {
-      resolve(Buffer.concat(chunks).toString())
-    })
-    readableStream.on('error', reject)
-  })
 
 type RegexString = string
 
@@ -62,8 +39,8 @@ export type ChatWorkerRule<ActionTypes extends string = 'actions'> = {
 const data: {
   value: {
     master: {
+      proxy?: string
       tokenTelegram: Array<{ name: TelegramBotName; token: string }>
-      tokenLark: { id: string; token: string }
       tokenTwitter: string
       biliLive: Record<
         TelegramBotName,
@@ -104,19 +81,10 @@ const data: {
 } = { value: {} as Record<keyof typeof configFilesType, any> }
 
 export default {
-  init: async () => {
-    data.value = Object.fromEntries(
-      await Promise.all(
-        blobClients.map(async (el) => [
-          el.fileName,
-          await streamToString(
-            (
-              await el.client.download()
-            ).readableStreamBody!
-          ),
-        ])
-      )
-    )
+  init: () => {
+    const f = fsj.read('./local-configs/master.json', 'json')
+    if (!f) throw new Error('config file \'./local-configs/master.json\' does not exist.')
+    data.value.master = f
   },
   get entries() {
     return data.value

@@ -18,9 +18,6 @@ export default async (...log: any[]) => {
       promiseRetry(
         (retry) =>
           bot.misaka.bot.telegram.sendMessage(target, res).catch(retry),
-        {
-          retries: 3,
-        }
       ).then()
     )
   )

@@ -2,6 +2,7 @@ node_modules
 dist
 ecosystem.config.js
 .eslintcache
+local-configs
 
 # Created by https://www.toptal.com/developers/gitignore/api/webstorm
 # Edit at https://www.toptal.com/developers/gitignore?templates=webstorm

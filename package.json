@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "start": "rollup -c && cd ./dist && node ./index.js",
+    "start": "rollup -c && node ./dist/index.js --enable-source-maps",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch",
     "lint": "eslint --fix ./src/**/*.ts",
     "build:types": "tsc --emitDeclarationOnly",
     "build:js": "rollup -c",
-    "build": "npm run lint && npm run build:js"
+    "build": "npm run lint && npm run build:js",
+    "postinstall": "node ./scripts/postinstall.js",
+    "prepare": "husky install"
   },
   "main": "dist/index.js",
   "types": "dist/types/index.d.ts",
@@ -30,13 +32,13 @@
     "@types/qs": "^6.9.6",
     "@typescript-eslint/eslint-plugin": "^4.26.1",
     "@typescript-eslint/parser": "^4.26.1",
-    "eslint": "^7.28.0",
+    "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-config-standard": "^16.0.3",
     "eslint-plugin-import": "^2.23.4",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^5.1.0",
-    "husky": "^6.0.0",
+    "husky": "^7.0.0",
     "lint-staged": "^11.0.0",
     "prettier": "^2.3.1",
     "rollup": "2.51.2",
@@ -50,6 +52,7 @@
     "execa": "^5.1.1",
     "fs-jetpack": "^4.1.0",
     "got": "^11.8.2",
+    "https-proxy-agent": "^5.0.0",
     "json-stringify-safe": "^5.0.1",
     "lodash-es": "^4.17.21",
     "mem": "^8.1.1",
@@ -57,11 +60,6 @@
     "qs": "^6.10.1",
     "regenerator-runtime": "^0.13.7",
     "telegraf": "^3.38.0"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
   },
   "lint-staged": {
     "*.ts": "npm run lint"

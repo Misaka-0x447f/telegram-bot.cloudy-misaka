@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 import got, { CancelableRequest } from 'got'
-import persistConfig from "../utils/persistConfig";
+import persistConfig from "../utils/configFile";
 
 type TwitterErrors = Array<{ title: string; detail: string; type: string }>
 
