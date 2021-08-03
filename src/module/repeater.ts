@@ -71,7 +71,7 @@ bot.misaka.message.sub(async ({ ctx, message, currentChat }) => {
   if (
     !(
       message?.reply_to_message &&
-      message?.text?.match(/复读|转发|repeat|@Misaka_0x447f_bot/)
+      message?.text?.match(/复读/)
     )
   )
     return

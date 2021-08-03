@@ -9,6 +9,7 @@ import { sendMessage } from '../interface/lark'
 export const twitterForwardingList: Array<{
   operator: typeof bot.misaka
   from: string
+    // eslint-disable-next-line no-unused-vars
   to: Array<number | ((key: { content: string }) => number | null)>
   options: Parameters<typeof getTweetTimelineById>[1]
 }> = [

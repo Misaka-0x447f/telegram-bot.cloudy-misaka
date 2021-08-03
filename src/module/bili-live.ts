@@ -43,14 +43,14 @@ const worker = async (
     telemetry('[bili-live] running online hook').then()
     await telegram[bot].runActions(
       config.onlineActions,
-      { defaultChatId: config.dest },
+      { defaultChatId: config.dest! },
       info
     )
   } else if (!isOnline && store.bili[id]?.wasOnline) {
     telemetry('[bili-live] running offline hook').then()
     await telegram[bot].runActions(
       config.offlineActions,
-      { defaultChatId: config.dest },
+      { defaultChatId: config.dest! },
       info
     )
   }
@@ -61,7 +61,7 @@ const worker = async (
   ) {
     await telegram[bot].runActions(
       config.categoryChangeActions,
-      { defaultChatId: config.dest },
+      { defaultChatId: config.dest! },
       info
     )
   }

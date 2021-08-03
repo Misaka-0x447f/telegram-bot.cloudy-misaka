@@ -46,6 +46,7 @@ const server = http.createServer((req, res) => {
   // home-made routing. for fun.
   const routes: Array<{
     path: RegExp
+    // eslint-disable-next-line no-unused-vars
     command: (params: {
       query: URLSearchParams
       param: Record<string, string>
