@@ -1,24 +1,31 @@
-export default {
-  tooFewArguments: (
-    expected: string | number,
-    actual: string | number
-  ) =>
-    `参数的数量不正确。需要 ${expected} 个参数，实际存在 ${actual} 个参数。\n` +
-    [0, '0'].includes(actual)
-      ? '你没有输入任何参数。先发送一条包含参数列表的消息，再回复该消息并选择命令。\n' +
-        '例如先发送 av39092411，再回复该消息并选择命令 /fetch_video。'
-      : '',
-  unexpectedArguments: (
-    argumentList: Array<{ name: string; acceptable: string }>
-  ) => {
-    const maxLength = argumentList.reduce((acc, cur) => {
+export interface ParamsDefinition {
+  argumentList?: Array<{ name: string; acceptable: string }>
+  replyMessageType?: string
+}
+
+const getHelpMessage = (params: ParamsDefinition) => {
+  const content = []
+  if (params.argumentList?.length) {
+    const maxLength = params.argumentList.reduce((acc, cur) => {
       return Math.max(cur.name.length, acc)
     }, 0)
-    let content = '参数错误。参数列表：'
-    content += argumentList.map((el) => `[${el.name}]`).join(' ') + '\n'
-    content += argumentList.map(
-      (el) => el.name.padEnd(maxLength + 3) + el.acceptable
-    )
-    return content
-  },
+    content.push('该命令需要以下参数：')
+    params.argumentList.forEach((el) => {
+      content.push(`[${el.name}]`.padEnd(maxLength + 3).concat(el.acceptable))
+    })
+  }
+  if (params.replyMessageType) {
+    content.push(`该命令需要回复 1 条消息，用于指定${params.replyMessageType}`)
+  }
+  return content.join('\n')
+}
+
+export default {
+  illegalArgumentCount: (expected: string | number, actual: string | number, params: ParamsDefinition) =>
+    `不合法的参数。需要 ${expected} 个参数，实际存在 ${actual} 个参数。\n${getHelpMessage(params)}`,
+  illegalReplyMessageCount: (params: ParamsDefinition) =>
+    '不合法的回复消息。该命令需要 1 条回复消息，实际没有回复任何消息。\n' +
+    `例如先发送 av39092411，再回复该消息并选择命令 /fetch_video。\n${getHelpMessage(params)}`,
+  illegalArguments: (params: ParamsDefinition) => `不合法的参数。\n${getHelpMessage(params)}`,
+  illegalReplyMessage: (params: ParamsDefinition) => `不合法的回复消息。\n${getHelpMessage(params)}`
 }

@@ -1,15 +1,15 @@
-import telegram from '../interface/telegram'
+import { BotType, getTelegramBotByAnyBotName } from "../interface/telegram";
 import { fetchRoomInfo, getLiveIDByShortId } from '../interface/bilibili'
 import store from '../store/runtime'
 import telemetry from '../utils/telemetry'
-import persistConfig from '../utils/configFile'
 import { formatMinute, isNumeric } from '../utils/lang'
 import { TelegramBotName } from "../utils/type";
+import configFile from "../utils/configFile";
 
-const configs = persistConfig.entries.master.biliLive
+const configs = configFile.entries.master.biliLive
 
 const worker = async (
-  bot: TelegramBotName,
+  bot: BotType,
   config: typeof configs[TelegramBotName]
 ) => {
   let id = config.watch
@@ -41,14 +41,14 @@ const worker = async (
 
   if (isOnline && !store.bili[id]?.wasOnline) {
     telemetry('[bili-live] running online hook').then()
-    await telegram[bot].runActions(
+    await bot.runActions(
       config.onlineActions,
       { defaultChatId: config.dest! },
       info
     )
   } else if (!isOnline && store.bili[id]?.wasOnline) {
     telemetry('[bili-live] running offline hook').then()
-    await telegram[bot].runActions(
+    await bot.runActions(
       config.offlineActions,
       { defaultChatId: config.dest! },
       info
@@ -59,7 +59,7 @@ const worker = async (
     res.area_name !== store.bili[id].lastCategory &&
     store.bili[id].lastCategory
   ) {
-    await telegram[bot].runActions(
+    await bot.runActions(
       config.categoryChangeActions,
       { defaultChatId: config.dest! },
       info
@@ -75,7 +75,7 @@ const worker = async (
 
 for (const [botName, config] of Object.entries(configs)) {
   const run = () => {
-    worker(botName as TelegramBotName, config).finally(() =>
+    worker(getTelegramBotByAnyBotName(botName), config).finally(() =>
       setTimeout(() => run(), config.updateInterval)
     )
   }

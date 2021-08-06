@@ -4,7 +4,7 @@ import TypedEvent from '../utils/TypedEvent'
 import * as tt from 'telegraf/typings/telegram-types'
 import promiseRetry from 'promise-retry'
 import { Message } from 'telegram-typings'
-import persistConfig, { Actions } from '../utils/configFile'
+import persistConfig, { Actions, RegexString } from "../utils/configFile";
 import { sleep } from '../utils/lang'
 import telemetry from '../utils/telemetry'
 import { TelegramBotName } from '../utils/type'
@@ -13,15 +13,17 @@ import HttpsProxyAgent from 'https-proxy-agent'
 const botList: Array<{ name: TelegramBotName; token: string }> = persistConfig
   .entries.master.tokenTelegram as any
 
-// @ts-ignore
-const agent = persistConfig.entries.master.proxy ? new HttpsProxyAgent(persistConfig.entries.master.proxy) : undefined
+const agent = persistConfig.entries.master.proxy
+  ? // @ts-ignore
+    new HttpsProxyAgent(persistConfig.entries.master.proxy)
+  : undefined
 
 const bots = botList.map((el) => ({
   ...el,
   instance: new Telegraf(el.token, {
     telegram: {
-      agent
-    }
+      agent,
+    },
   }),
 }))
 
@@ -103,11 +105,15 @@ const botFactory = (el: typeof bots[0]) => {
     bot: el.instance,
     sendMessage,
     self: {
-      username: el.instance.options.username!
+      username: el.instance.options.username!,
     },
     runActions: (
       actions: Actions,
-      options: { defaultChatId: number },
+      options: {
+        defaultChatId: number
+        // eslint-disable-next-line no-unused-vars
+        filterMethod?: (text: string, filterText: RegexString) => boolean
+      },
       params: Record<string, string | number | undefined> = {}
     ) => {
       // convert actions to promises
@@ -121,22 +127,22 @@ const botFactory = (el: typeof bots[0]) => {
                 step
               )}`
             )
-          else if (step.type === 'message')
-            await sendMessage(
-              chatId,
-              step.text.replaceAll(/\${(.*?)}/g, (_, name) =>
-                params[name]?.toString() || `<${name}=nil>`
-              )
+          else if (step.type === 'message') {
+            const text = step.text.replaceAll(
+              /\${(.*?)}/g,
+              (_, name) => params[name]?.toString() || `<${name}=nil>`
             )
-          else if (step.type === 'sleep') await sleep(step.time)
+            if (
+              options.filterMethod &&
+              !options.filterMethod(text, step.filter)
+            )
+              return
+            await sendMessage(chatId, text)
+          } else if (step.type === 'sleep') await sleep(step.time)
           else if (step.type === 'messageByForward')
             await promiseRetry((retry) =>
               el.instance.telegram
-                .forwardMessage(
-                  chatId,
-                  step.source,
-                  step.messageId
-                )
+                .forwardMessage(chatId, step.source, step.messageId)
                 .catch(retry)
             )
           else {
@@ -149,8 +155,8 @@ const botFactory = (el: typeof bots[0]) => {
         }
       })
       // await all actions done
-      return Promise.all(promises.map(el => el())).then()
-    }
+      return Promise.all(promises.map((el) => el())).then()
+    },
   }
 }
 
@@ -161,5 +167,17 @@ export const exportBot = {} as Record<TelegramBotName, BotType>
 bots.forEach((el) => {
   exportBot[el.name] = botFactory(el)
 })
+
+export const getTelegramBotByAnyBotName = (botName: string) => {
+  if (!exportBot[botName as TelegramBotName]) {
+    const message = `Assertion error: Bot name ${botName} does not exist, but mentioned by config file or something else. ${
+      new Error().stack
+    }`
+    telemetry(message).then(() => {
+      throw new Error(message)
+    })
+  }
+  return exportBot[botName as TelegramBotName]
+}
 
 export default exportBot

@@ -1,11 +1,10 @@
-import persistConfig from "../utils/configFile";
-import telegram from "../interface/telegram";
-import { TelegramBotName } from "../utils/type";
+import { getTelegramBotByAnyBotName } from "../interface/telegram";
+import configFile from "../utils/configFile";
 
-const configs = persistConfig.entries.master.ping
+const configs = configFile.entries.master.ping
 
 for (const [botName, config] of Object.entries(configs)) {
-  const bot = telegram[botName as TelegramBotName]
+  const bot = getTelegramBotByAnyBotName(botName)
   bot.message.sub(async ({ message, currentChat}) => {
     const isPing =
       (message.text?.includes('/ping') && message.chat.type === 'private') ||

@@ -2,19 +2,20 @@
  * This file is meant to be read config from some remote, but for now it only read config from local.
  */
 
-import { TelegramBotName } from "./type";
+import { TelegramBotName } from './type'
 import fsj from 'fs-jetpack'
 
 enum configFilesType {
   'master',
 }
 
-type RegexString = string
+export type RegexString = string
 
 export type Actions = ((
   | {
       type: 'message'
       text: string
+      filter: RegexString
     }
   | {
       type: 'sleep'
@@ -26,14 +27,12 @@ export type Actions = ((
       messageId: number
     }
 ) & {
-  filter?: RegexString
   dest?: number
 })[][]
 
 export type ChatWorkerRule<ActionTypes extends string = 'actions'> = {
-  watch: string | number
+  watch: string
   updateInterval: number
-  dest?: number
 } & Record<ActionTypes, Actions>
 
 const data: {
@@ -42,7 +41,7 @@ const data: {
       proxy?: string
       insight: {
         telegramSupervisor: number[]
-      },
+      }
       tokenTelegram: Array<{ name: TelegramBotName; token: string }>
       tokenTwitter: string
       biliLive: Record<
@@ -51,10 +50,15 @@ const data: {
           'onlineActions' | 'offlineActions' | 'categoryChangeActions'
         >
       >
-      chatBridge: Array<{
-        from: number
-        to: number
-      }>
+      chatBridge: Record<
+        TelegramBotName,
+        {
+          list: Array<{
+            from: number
+            to: number
+          }>
+        }
+      >
       fetchSticker: Record<TelegramBotName, {}>
       fetchVideo: Record<TelegramBotName, {}>
       getUserInfo: Record<TelegramBotName, {}>
@@ -66,7 +70,7 @@ const data: {
           list: Array<{
             name: string
             id: number
-          }>,
+          }>
           allowUser?: number[]
         }
       >
@@ -74,6 +78,7 @@ const data: {
       twitterForwarding: Record<
         TelegramBotName,
         ChatWorkerRule & {
+          allowConfigUser?: number[]
           options?: Partial<{
             excludeReplies: boolean
             excludeRetweets: boolean
@@ -87,7 +92,10 @@ const data: {
 export default {
   init: () => {
     const f = fsj.read('./local-configs/master.json', 'json')
-    if (!f) throw new Error('config file \'./local-configs/master.json\' does not exist.')
+    if (!f)
+      throw new Error(
+        "config file './local-configs/master.json' does not exist."
+      )
     data.value.master = f
   },
   get entries() {

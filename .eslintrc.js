@@ -13,6 +13,7 @@ module.exports = {
   rules: {
     'no-unused-vars': ['error', {
       varsIgnorePattern: '_+',
+      argsIgnorePattern: '_+',
       ignoreRestSiblings: true,
     }],
   },

@@ -19,4 +19,6 @@ export const selectCase = <T>(
   }
 }
 
+export const argsTypeValidation = (args: unknown[], rules: ((_: unknown) => boolean)[]) => args.every((val, key) => (rules[key] || (() => false))(val))
+
 export const isNumeric = (n: any): n is string => !isNaN(parseFloat(n)) && isFinite(n)
