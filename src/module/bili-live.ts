@@ -1,55 +1,20 @@
-import bot from '../interface/bot'
+import { BotType, getTelegramBotByAnyBotName } from "../interface/telegram";
 import { fetchRoomInfo, getLiveIDByShortId } from '../interface/bilibili'
-import store from '../store'
-import { formatMinute, rand, sleep } from '../utils/lang'
+import store from '../store/runtime'
 import telemetry from '../utils/telemetry'
+import { formatMinute, isNumeric } from '../utils/lang'
+import { TelegramBotName } from "../utils/type";
+import configFile from "../utils/configFile";
 
-const sendMessage = (text: string) =>
-  bot.ywwuyi.sendMessage(-1001322798787, text)
+const configs = configFile.entries.master.biliLive
 
-type Handler = (p: {
-  title: string
-  category: string
-  description: string
-  lastOnline: Date | null
-}) => Promise<unknown>
-
-const configs = [
-  {
-    id: 6655,
-    handler: {
-      online: ({ title }) =>
-        sendMessage(`${title}\n昏睡上播\nhttps://live.bilibili.com/6655`),
-      offline: async ({ lastOnline }) => {
-        try {
-          if (lastOnline) {
-            await sendMessage(
-              `已播${formatMinute(
-                (new Date().getTime() - lastOnline?.getTime?.()) / 60000
-              )}`
-            )
-            await sleep(rand(20000, 60000))
-          }
-        } finally {
-          await sendMessage('zzzzzzzzz')
-        }
-      },
-      categoryChange: async ({ category }) => {
-        await sendMessage(`你爽已更换分区：${category}`)
-      },
-    },
-    interval: 30000,
-  },
-] as Array<{
-  id: number
-  handler: Partial<Record<'online' | 'offline' | 'categoryChange', Handler>>
-  interval: number
-}>
-
-const worker = async (config: typeof configs[0]) => {
-  let id = config.id
+const worker = async (
+  bot: BotType,
+  config: typeof configs[TelegramBotName]
+) => {
+  let id = config.watch
   // 短号查询长号
-  if (id < 10000) {
+  if (isNumeric(id) && parseInt(id) < 10000) {
     id = await getLiveIDByShortId(id)
   }
 
@@ -64,26 +29,41 @@ const worker = async (config: typeof configs[0]) => {
     }
   }
 
-  const info: Parameters<Handler>[0] = {
+  const info = {
     title: res.title,
     category: res.area_name,
-    description: res.description,
-    lastOnline: store.bili[id].lastOnline,
+    desc: res.description,
+    lastOnline: store.bili[id].lastOnline?.toString(),
+    liveMinutesUntilNow: formatMinute(
+      (new Date().getTime() - store.bili[id].lastOnline?.getTime?.()!) / 60000
+    ),
   }
 
   if (isOnline && !store.bili[id]?.wasOnline) {
-    telemetry('[bili-live] running online hook')
-    await config.handler?.online?.(info)
+    telemetry('[bili-live] running online hook').then()
+    await bot.runActions(
+      config.onlineActions,
+      { defaultChatId: config.dest! },
+      info
+    )
   } else if (!isOnline && store.bili[id]?.wasOnline) {
-    telemetry('[bili-live] running offline hook')
-    await config.handler?.offline?.(info)
+    telemetry('[bili-live] running offline hook').then()
+    await bot.runActions(
+      config.offlineActions,
+      { defaultChatId: config.dest! },
+      info
+    )
   }
 
   if (
     res.area_name !== store.bili[id].lastCategory &&
     store.bili[id].lastCategory
   ) {
-    await config.handler?.categoryChange?.(info)
+    await bot.runActions(
+      config.categoryChangeActions,
+      { defaultChatId: config.dest! },
+      info
+    )
   }
 
   if (isOnline) {
@@ -93,7 +73,11 @@ const worker = async (config: typeof configs[0]) => {
   store.bili[id].lastCategory = res.area_name
 }
 
-const run = (config: typeof configs[0]): any =>
-  worker(config).finally(() => setTimeout(() => run(config), config.interval))
-
-configs.forEach(run)
+for (const [botName, config] of Object.entries(configs)) {
+  const run = () => {
+    worker(getTelegramBotByAnyBotName(botName), config).finally(() =>
+      setTimeout(() => run(), config.updateInterval)
+    )
+  }
+  run()
+}

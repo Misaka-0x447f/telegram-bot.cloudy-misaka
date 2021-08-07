@@ -2,7 +2,7 @@
 import got from 'got'
 import mem from 'mem'
 
-export const getLiveIDByShortId = mem(async (shortID) => {
+export const getLiveIDByShortId = mem(async (shortID: string) => {
   const liveIDResponse = await got({
     method: 'get',
     url: `https://api.live.bilibili.com/room/v1/Room/room_init?id=${shortID}`,

@@ -1,12 +1,13 @@
-import bot from '../interface/bot'
+import bot from '../interface/telegram'
 import http from 'http'
 import qs from 'qs'
 
 import crypto from 'crypto'
 import * as url from 'url'
+import persistConfig from "../utils/configFile";
 
 const checksum = crypto.createHash('sha1')
-checksum.update(process.env.TELEGRAM_BOT_TOKEN_STRAWBERRY960!)
+checksum.update(persistConfig.entries.master.tokenTelegram.find(el => el.name === 'strawberry960')?.token!)
 const token = checksum.digest('hex')
 
 const sendResponse = async (
@@ -45,6 +46,7 @@ const server = http.createServer((req, res) => {
   // home-made routing. for fun.
   const routes: Array<{
     path: RegExp
+    // eslint-disable-next-line no-unused-vars
     command: (params: {
       query: URLSearchParams
       param: Record<string, string>

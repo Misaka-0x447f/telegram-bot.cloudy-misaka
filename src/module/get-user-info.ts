@@ -1,22 +1,54 @@
-import bot from '../interface/bot'
+import configFile from '../utils/configFile'
+import { getTelegramBotByAnyBotName } from '../interface/telegram'
+import * as tt from 'telegraf/typings/telegram-types'
+import errorMessages from '../utils/errorMessages'
 
-const config = [{ worker: bot.misaka }, { worker: bot.strawberry960 }]
+const chatIdInfo = (chat: tt.Chat) =>
+  [
+    `Hi ${chat.first_name || chat.title} ${chat.last_name || ''}`,
+    `chatId: ${chat.id}`,
+    ...(chat.username ? [`userName: ${chat.username}`] : []),
+    `chatType: ${chat.type}`,
+  ].join('\n')
 
-config.forEach((el) =>
-  el.worker.command.sub(async ({ ctx, meta }) => {
-    if (meta.commandName !== 'get_user_info' || !ctx.chat) return
-    ctx.telegram
-      .sendMessage(
+const paramDefinition = {
+  argumentList: [
+    {
+      name: 'chatId?',
+      acceptable: '可选的 chatId。如不指定，则查询当前 chat。',
+    },
+  ],
+}
+
+for (const [botName, _] of Object.entries(
+  configFile.entries.master.getUserInfo
+)) {
+  const bot = getTelegramBotByAnyBotName(botName)
+  bot.command.sub(async ({ ctx, meta: {args, commandName} }) => {
+    if (commandName !== 'get_user_info' || !ctx.chat) return
+    // no white space
+    if (args[0]?.match(/^((?!\s).)*$/)) {
+      bot.sendMessage(ctx.chat.id, '正在查询').then()
+      try {
+        const chatInfo = await bot.bot.telegram.getChat(parseInt(args[0]))
+        await bot.sendMessage(ctx.chat.id, chatIdInfo(chatInfo))
+      } catch (e) {
+        if (e.description === 'Bad Request: chat not found') {
+          await bot.sendMessage(
+            ctx.chat?.id!,
+            '会话不存在。请注意，如果我没有加入目标群或者没有和目标用户对话过，则无法查询到信息。'
+          )
+        } else {
+          await bot.sendMessage(ctx.chat?.id!, JSON.stringify(e))
+        }
+      }
+    } else if (!args[0]) {
+      await bot.sendMessage(ctx.chat.id, chatIdInfo(ctx.chat)).then()
+    } else {
+      await bot.sendMessage(
         ctx.chat.id,
-        [
-          `Hi ${ctx.chat.first_name || ctx.chat.title} ${
-            ctx.chat.last_name || ''
-          }`,
-          `chatId: ${ctx.chat.id}`,
-          ...(ctx.chat.username ? [`userName: ${ctx.chat.username}`] : []),
-          `chatType: ${ctx.chat.type}`,
-        ].join('\n')
+        errorMessages.illegalArguments(paramDefinition)
       )
-      .then()
+    }
   })
-)
+}

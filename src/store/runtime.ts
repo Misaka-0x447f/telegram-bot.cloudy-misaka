@@ -9,6 +9,7 @@ const store = {
     {
       nonRepeatCounter: number
       messageHistory: Array<MessageHistory>
+      // eslint-disable-next-line no-unused-vars
       createMessageHistory: (el: MessageHistory) => void
     }
   >,
@@ -18,7 +19,7 @@ const store = {
     ywwuyiLiveCategory: null as null | string,
   },
   bili: {} as Record<
-    number,
+    string,
     {
       wasOnline: boolean
       lastCategory: null | string

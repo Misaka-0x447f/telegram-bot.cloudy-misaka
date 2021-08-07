@@ -1,5 +1,6 @@
-import bot, { BotType } from '../interface/bot'
+import { BotType, getTelegramBotByAnyBotName } from '../interface/telegram'
 import errorMessages from '../utils/errorMessages'
+import configFile from '../utils/configFile'
 // import * as os from 'os'
 // import { download } from '../utils/file'
 // import * as fs from 'fs'
@@ -8,17 +9,17 @@ import errorMessages from '../utils/errorMessages'
 // @ts-ignore
 // import dwebpName from '../../bin/dwebp-1.2.0-rc3.binary'
 
+const paramDefinition = { replyMessageType: '贴纸。' }
+
 const createWorker = (worker: BotType) =>
   worker.command.sub(async ({ ctx, meta }) => {
     if (meta.commandName !== 'fetch_sticker') return
     if (!ctx.message?.reply_to_message) {
-      errorMessages.tooFewArguments(1, 0)
+      errorMessages.illegalReplyMessageCount(paramDefinition)
       return
     }
     if (!ctx.message.reply_to_message.sticker) {
-      errorMessages.unexpectedArguments([
-        { name: 'sticker', acceptable: '任意贴纸。' },
-      ])
+      errorMessages.illegalReplyMessage(paramDefinition)
     }
     const fileId = ctx.message.reply_to_message.sticker?.file_id
     if (!fileId) {
@@ -42,4 +43,8 @@ const createWorker = (worker: BotType) =>
     // fs.unlinkSync(targetFilePath)
   })
 
-createWorker(bot.misaka)
+const config = configFile.entries.master.fetchSticker
+
+Object.keys(config).forEach((botName) =>
+  createWorker(getTelegramBotByAnyBotName(botName))
+)
