@@ -84,17 +84,11 @@ for (const [botName, config] of Object.entries(configs)) {
         .then()
       return
     }
+    const recentTweets = currentBotConfig.recentTweetIds.concat().reverse()
     if (historyCount === 0) {
-      currentBotConfig.startFrom =
-        currentBotConfig.recentTweetIds[0] + BigInt(1)
-      if (!isNumeric(currentBotConfig.startFrom)) {
-        const errorMsg = `Assertion error: Tweet forwarding config for ${botName} error. ${currentBotConfig.recentTweetIds[0]} is not a number.`
-        await telemetry(errorMsg)
-        throw new Error(errorMsg)
-      }
+      currentBotConfig.startFrom = recentTweets[0] + BigInt(1)
     } else {
-      currentBotConfig.startFrom =
-        currentBotConfig.recentTweetIds.concat().reverse()[historyCount - 1]
+      currentBotConfig.startFrom = recentTweets[historyCount - 1]
     }
     await bot.sendMessage(chatId, '成功。')
   })
