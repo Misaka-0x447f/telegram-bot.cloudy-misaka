@@ -1,7 +1,7 @@
 import { getTweetTimelineById } from '../interface/twitter'
 import telemetry from '../utils/telemetry'
 import { HTTPError } from 'got'
-import { isNull } from 'lodash-es'
+import { isNull, last } from 'lodash-es'
 import { TelegramBotName } from '../utils/type'
 import configFile from '../utils/configFile'
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
@@ -14,8 +14,9 @@ const store: Partial<
   Record<
     TelegramBotName,
     {
-      startFrom: null | string
-      recentTweetIds: string[]
+      startFrom: null | bigint
+      configTipSent: boolean
+      recentTweetIds: bigint[]
     }
   >
 > = {}
@@ -59,7 +60,7 @@ for (const [botName, config] of Object.entries(configs)) {
       return
     }
     if (!isNull(store[botName as TelegramBotName]?.startFrom)) {
-      bot.sendMessage(chatId, `${botName} cannot be configured.`).then()
+      bot.sendMessage(chatId, `${botName} has been configured.`).then()
       return
     }
     const currentBotConfig = store[botName as TelegramBotName]!
@@ -84,9 +85,8 @@ for (const [botName, config] of Object.entries(configs)) {
       return
     }
     if (historyCount === 0) {
-      currentBotConfig.startFrom = (
-        parseInt(currentBotConfig.recentTweetIds[0]) + 1
-      ).toString()
+      currentBotConfig.startFrom =
+        currentBotConfig.recentTweetIds[0] + BigInt(1)
       if (!isNumeric(currentBotConfig.startFrom)) {
         const errorMsg = `Assertion error: Tweet forwarding config for ${botName} error. ${currentBotConfig.recentTweetIds[0]} is not a number.`
         await telemetry(errorMsg)
@@ -94,43 +94,69 @@ for (const [botName, config] of Object.entries(configs)) {
       }
     } else {
       currentBotConfig.startFrom =
-        currentBotConfig.recentTweetIds[historyCount - 1]
+        currentBotConfig.recentTweetIds.concat().reverse()[historyCount - 1]
     }
+    await bot.sendMessage(chatId, '成功。')
   })
 }
 
-const worker = async (
-  botName: string,
-) => {
+const worker = async (botName: string) => {
   const bot = getTelegramBotByAnyBotName(botName)
   const config = configs[botName as TelegramBotName]
   const recentTweets = await getTweetTimelineById(config.watch, {
     ...config.options,
   }).catch((err: HTTPError) => {
     console.error(err)
-    telemetry(err.message, err)
+    telemetry(err.message, err.response, err)
   })
   if (!recentTweets?.data) return
   if (!store[botName as TelegramBotName]) {
     store[botName as TelegramBotName] = {
       startFrom: null,
+      configTipSent: false,
       recentTweetIds: [],
     }
   }
   const currentStore = store[botName as TelegramBotName]!
-  currentStore.recentTweetIds = recentTweets.data.map((el) => el.id).concat().reverse()
+  currentStore.recentTweetIds = recentTweets.data
+    .map((el) => BigInt(el.id))
+    .concat()
+    .reverse()
+
   if (isNull(currentStore.startFrom)) {
+    if (currentStore.configTipSent) return
     config.allowConfigUser?.forEach((id) =>
       bot.sendMessage(
         id,
         `${config.watch} 的 tweet 已经完成 bot 重新启动后的第一次成功获取，需要指定追溯多少条历史 tweet。\n` +
-        `可以使用指令 /${historyTweetCountCommand} 来完成该配置，详情请运行该命令查看帮助。\n` +
-        `下面是最近的 tweet 列表（正序排列）：\n` + recentTweets.data!.map((el, key) => `${key + 1}: ${el.text}`).join('\n')
+          `可以使用指令 /${historyTweetCountCommand} 来完成该配置，详情请运行该命令查看帮助。\n` +
+          `下面是最近的 tweet 列表（倒序排列）：\n` +
+          recentTweets
+            .data!.map((el, key) => `${key + 1}: ${el.text}`)
+            .join('\n')
       )
     )
+    currentStore.configTipSent = true
     return
   }
-  bot.runActions(config.actions, {defaultChatId: 0, filterMethod: (text, filterText) => !!text.match(filterText)}).then()
+  const tweetsToSend = recentTweets.data
+    .filter((el) => BigInt(el.id) >= currentStore.startFrom!)
+    .concat()
+    .reverse()
+  if (!tweetsToSend.length) return
+  for (const tweet of tweetsToSend) {
+    await bot
+      .runActions(
+        config.actions,
+        {
+          defaultChatId: 0,
+          filterMethod: (text, filterText) => !!text.match(filterText),
+        },
+        { ...tweet }
+      )
+      .then()
+  }
+  currentStore.startFrom = BigInt(last(tweetsToSend)!.id) + BigInt(1)
 }
 const main = async (botName: string) => {
   await worker(botName)
@@ -140,4 +166,4 @@ const main = async (botName: string) => {
   )
 }
 
-Object.keys(configs).forEach(el => main(el))
+Object.keys(configs).forEach((el) => main(el))

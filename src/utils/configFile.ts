@@ -3,6 +3,7 @@
  */
 
 import { TelegramBotName } from './type'
+import JSON5 from 'json5'
 import fsj from 'fs-jetpack'
 
 enum configFilesType {
@@ -91,12 +92,12 @@ const data: {
 
 export default {
   init: () => {
-    const f = fsj.read('./local-configs/master.json', 'json')
+    const f = fsj.read('./local-configs/master.json5', 'utf8')
     if (!f)
       throw new Error(
-        "config file './local-configs/master.json' does not exist."
+        "config file './local-configs/master.json5' does not exist."
       )
-    data.value.master = f
+    data.value.master = JSON5.parse(f)
   },
   get entries() {
     return data.value

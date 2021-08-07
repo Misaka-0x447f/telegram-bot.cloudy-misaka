@@ -1,20 +1,9 @@
 /* eslint-disable camelcase */
 import got, { CancelableRequest } from 'got'
 import persistConfig from "../utils/configFile";
+import { HttpsProxyAgent } from "hpagent";
 
 type TwitterErrors = Array<{ title: string; detail: string; type: string }>
-
-const toTwitterTime = (time?: Date) => {
-  if (!time) return
-  return new Date(
-    Math.max(
-      new Date(time).getTime(),
-      new Date('2010-11-06T00:00:00Z').getTime()
-    )
-  )
-    .toISOString()
-    .replace(/\.\d{3}/, '')
-}
 
 const authHeader = () => ({
   Authorization: `Bearer ${persistConfig.entries.master.tokenTwitter}`,
@@ -39,8 +28,6 @@ export const getTweetTimelineById = (
   {
     excludeReplies = false,
     excludeRetweets = false,
-    startTime = undefined as Date | undefined,
-    endTime = undefined as Date | undefined,
   } = {}
 ) => {
   const exclude = []
@@ -50,10 +37,13 @@ export const getTweetTimelineById = (
     .get(`https://api.twitter.com/2/users/${userId}/tweets`, {
       searchParams: {
         exclude: exclude.join(','),
-        start_time: toTwitterTime(startTime),
-        end_time: toTwitterTime(endTime),
       },
       headers: authHeader(),
+      agent: persistConfig.entries.master.proxy ? {
+        https: new HttpsProxyAgent({
+          proxy: persistConfig.entries.master.proxy
+        })
+      } : {},
     })
     .json() as CancelableRequest<{
     data?: Array<{ id: string; text: string }>

@@ -24,14 +24,13 @@ for (const [botName, _] of Object.entries(
   configFile.entries.master.getUserInfo
 )) {
   const bot = getTelegramBotByAnyBotName(botName)
-  bot.command.sub(async ({ ctx, meta }) => {
-    if (meta.commandName !== 'get_user_info' || !ctx.chat) return
-    const reply = ctx.message?.reply_to_message
+  bot.command.sub(async ({ ctx, meta: {args, commandName} }) => {
+    if (commandName !== 'get_user_info' || !ctx.chat) return
     // no white space
-    if (reply?.text?.match(/^((?!\s).)*$/)) {
+    if (args[0]?.match(/^((?!\s).)*$/)) {
       bot.sendMessage(ctx.chat.id, '正在查询').then()
       try {
-        const chatInfo = await bot.bot.telegram.getChat(parseInt(reply?.text))
+        const chatInfo = await bot.bot.telegram.getChat(parseInt(args[0]))
         await bot.sendMessage(ctx.chat.id, chatIdInfo(chatInfo))
       } catch (e) {
         if (e.description === 'Bad Request: chat not found') {
@@ -43,12 +42,12 @@ for (const [botName, _] of Object.entries(
           await bot.sendMessage(ctx.chat?.id!, JSON.stringify(e))
         }
       }
-    } else if (!reply) {
+    } else if (!args[0]) {
       await bot.sendMessage(ctx.chat.id, chatIdInfo(ctx.chat)).then()
     } else {
       await bot.sendMessage(
         ctx.chat.id,
-        errorMessages.illegalReplyMessage(paramDefinition)
+        errorMessages.illegalArguments(paramDefinition)
       )
     }
   })

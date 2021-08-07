@@ -173,9 +173,8 @@ export const getTelegramBotByAnyBotName = (botName: string) => {
     const message = `Assertion error: Bot name ${botName} does not exist, but mentioned by config file or something else. ${
       new Error().stack
     }`
-    telemetry(message).then(() => {
-      throw new Error(message)
-    })
+    telemetry(message).then()
+    throw new Error(message)
   }
   return exportBot[botName as TelegramBotName]
 }
