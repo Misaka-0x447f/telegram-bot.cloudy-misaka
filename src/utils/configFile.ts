@@ -34,6 +34,7 @@ export type Actions = ((
 export type ChatWorkerRule<ActionTypes extends string = 'actions'> = {
   watch: string
   updateInterval: number
+  dest?: number
 } & Record<ActionTypes, Actions>
 
 const data: {
