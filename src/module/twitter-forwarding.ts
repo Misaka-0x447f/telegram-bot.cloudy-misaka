@@ -139,6 +139,11 @@ const worker = async (botName: string) => {
     .reverse()
   if (!tweetsToSend.length) return
   for (const tweet of tweetsToSend) {
+    const sourceUrlIfNoUrlInTweetContent = tweet.text.match(
+      /https:\/\/t\.co\/\w+/
+    )
+      ? ''
+      : `https://twitter.com/${config.watch}/status/${tweet.id}`
     await bot
       .runActions(
         config.actions,
@@ -146,7 +151,12 @@ const worker = async (botName: string) => {
           defaultChatId: 0,
           filterMethod: (text, filterText) => !!text.match(filterText),
         },
-        { ...tweet }
+        {
+          ...tweet,
+          sourceUrlIfNoUrlInTweetContent,
+          sourceUrlIfNoUrlInTweetContentWithLineBreak:
+            '\n' + sourceUrlIfNoUrlInTweetContent,
+        }
       )
       .then()
   }
