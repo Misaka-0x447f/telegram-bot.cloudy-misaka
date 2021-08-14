@@ -9,6 +9,7 @@ import { sleep } from '../utils/lang'
 import telemetry from '../utils/telemetry'
 import { TelegramBotName } from '../utils/type'
 import HttpsProxyAgent from 'https-proxy-agent'
+import { runActionFunctions } from "../utils/actionFunctions";
 
 const botList: Array<{ name: TelegramBotName; token: string }> = persistConfig
   .entries.master.tokenTelegram as any
@@ -128,10 +129,10 @@ const botFactory = (el: typeof bots[0]) => {
               )}`
             )
           else if (step.type === 'message') {
-            const text = step.text.replaceAll(
+            const text = runActionFunctions(step.text.replaceAll(
               /\${(.*?)}/g,
               (_, name) => params[name]?.toString() || `<${name}=nil>`
-            )
+            ))
             if (
               options.filterMethod &&
               !options.filterMethod(text, step.filter)

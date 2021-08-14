@@ -49,7 +49,7 @@ const data: {
       biliLive: Record<
         TelegramBotName,
         ChatWorkerRule<
-          'onlineActions' | 'offlineActions' | 'categoryChangeActions'
+          'onlineActions' | 'offlineActions' | 'categoryChangeActions' | 'titleChangeActions'
         >
       >
       chatBridge: Record<

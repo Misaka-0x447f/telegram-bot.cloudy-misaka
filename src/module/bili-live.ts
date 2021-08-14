@@ -1,10 +1,10 @@
-import { BotType, getTelegramBotByAnyBotName } from "../interface/telegram";
+import { BotType, getTelegramBotByAnyBotName } from '../interface/telegram'
 import { fetchRoomInfo, getLiveIDByShortId } from '../interface/bilibili'
 import store from '../store/runtime'
 import telemetry from '../utils/telemetry'
 import { formatMinute, isNumeric } from '../utils/lang'
-import { TelegramBotName } from "../utils/type";
-import configFile from "../utils/configFile";
+import { TelegramBotName } from '../utils/type'
+import configFile from '../utils/configFile'
 
 const configs = configFile.entries.master.biliLive
 
@@ -25,6 +25,7 @@ const worker = async (
     store.bili[id] = {
       wasOnline: false,
       lastCategory: res.area_name,
+      lastTitle: res.title,
       lastOnline: null,
     }
   }
@@ -39,14 +40,14 @@ const worker = async (
     ),
   }
 
-  if (isOnline && !store.bili[id]?.wasOnline) {
+  if (config.onlineActions && isOnline && !store.bili[id]?.wasOnline) {
     telemetry('[bili-live] running online hook').then()
     await bot.runActions(
       config.onlineActions,
       { defaultChatId: config.dest! },
       info
     )
-  } else if (!isOnline && store.bili[id]?.wasOnline) {
+  } else if (config.offlineActions && !isOnline && store.bili[id]?.wasOnline) {
     telemetry('[bili-live] running offline hook').then()
     await bot.runActions(
       config.offlineActions,
@@ -56,6 +57,7 @@ const worker = async (
   }
 
   if (
+    config.categoryChangeActions &&
     res.area_name !== store.bili[id].lastCategory &&
     store.bili[id].lastCategory
   ) {
@@ -66,11 +68,20 @@ const worker = async (
     )
   }
 
+  if (config.titleChangeActions && res.title !== store.bili[id].lastTitle) {
+    await bot.runActions(
+      config.titleChangeActions,
+      { defaultChatId: config.dest! },
+      info
+    )
+  }
+
   if (isOnline) {
     store.bili[id].lastOnline = res.live_time
   }
   store.bili[id].wasOnline = isOnline
   store.bili[id].lastCategory = res.area_name
+  store.bili[id].lastTitle = res.title
 }
 
 for (const [botName, config] of Object.entries(configs)) {

@@ -1,4 +1,3 @@
-import { twitterForwardingList } from '../module/twitter-forwarding'
 import { isUndefined } from 'lodash-es'
 
 type MessageHistory = { digest: string; from: string }
@@ -13,7 +12,6 @@ const store = {
       createMessageHistory: (el: MessageHistory) => void
     }
   >,
-  twitterForwardingList: [] as Array<typeof twitterForwardingList[0]>,
   douyu: {
     ywwuyiLiveOnline: false,
     ywwuyiLiveCategory: null as null | string,
@@ -23,6 +21,7 @@ const store = {
     {
       wasOnline: boolean
       lastCategory: null | string
+      lastTitle: null | string
       lastOnline: Date | null
     }
   >,
