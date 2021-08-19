@@ -129,10 +129,10 @@ const botFactory = (el: typeof bots[0]) => {
               )}`
             )
           else if (step.type === 'message') {
-            const text = runActionFunctions(step.text.replaceAll(
+            const text = runActionFunctions(step.text).replaceAll(
               /\${(.*?)}/g,
               (_, name) => params[name]?.toString() || `<${name}=nil>`
-            ))
+            )
             if (
               options.filterMethod &&
               !options.filterMethod(text, step.filter)
