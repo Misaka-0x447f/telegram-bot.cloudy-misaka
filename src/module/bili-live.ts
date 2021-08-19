@@ -1,7 +1,6 @@
 import { BotType, getTelegramBotByAnyBotName } from '../interface/telegram'
 import { fetchRoomInfo, getLiveIDByShortId } from '../interface/bilibili'
 import store from '../store/runtime'
-import telemetry from '../utils/telemetry'
 import { formatMinute, isNumeric } from '../utils/lang'
 import { TelegramBotName } from '../utils/type'
 import configFile from '../utils/configFile'
@@ -41,14 +40,12 @@ const worker = async (
   }
 
   if (config.onlineActions && isOnline && !store.bili[id]?.wasOnline) {
-    telemetry('[bili-live] running online hook').then()
     await bot.runActions(
       config.onlineActions,
       { defaultChatId: config.dest! },
       info
     )
   } else if (config.offlineActions && !isOnline && store.bili[id]?.wasOnline) {
-    telemetry('[bili-live] running offline hook').then()
     await bot.runActions(
       config.offlineActions,
       { defaultChatId: config.dest! },
