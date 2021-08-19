@@ -39,9 +39,9 @@ export const getTweetTimelineById = (
         exclude: exclude.join(','),
       },
       headers: authHeader(),
-      agent: persistConfig.entries.master.proxy ? {
+      agent: process.env.HTTP_PROXY ? {
         https: new HttpsProxyAgent({
-          proxy: persistConfig.entries.master.proxy
+          proxy: process.env.HTTP_PROXY
         })
       } : {},
     })

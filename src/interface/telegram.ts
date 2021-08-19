@@ -14,7 +14,7 @@ import { runActionFunctions } from "../utils/actionFunctions";
 const botList: Array<{ name: TelegramBotName; token: string }> = persistConfig
   .entries.master.tokenTelegram as any
 
-const agent = persistConfig.entries.master.proxy
+const agent = process.env.HTTP_PROXY
   ? // @ts-ignore
     new HttpsProxyAgent(persistConfig.entries.master.proxy)
   : undefined

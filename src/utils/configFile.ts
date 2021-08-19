@@ -40,7 +40,6 @@ export type ChatWorkerRule<ActionTypes extends string = 'actions'> = {
 const data: {
   value: {
     master: {
-      proxy?: string
       insight: {
         telegramSupervisor: number[]
       }

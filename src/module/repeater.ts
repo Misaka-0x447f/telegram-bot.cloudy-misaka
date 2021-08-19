@@ -54,7 +54,7 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
       hasDocument +
       forwardCounterBonusChance
     if (rand(0, 100) < chance || (sameMessageCount === 1 && chance > 0)) {
-      await sleep(rand(2, 5))
+      await sleep(rand(2000, 5000))
       if (message) {
         await ctx.telegram.sendCopy(message.chat.id, message)
         createMessageHistory({
