@@ -16,7 +16,7 @@ const botList: Array<{ name: TelegramBotName; token: string }> = persistConfig
 
 const agent = process.env.HTTP_PROXY
   ? // @ts-ignore
-    new HttpsProxyAgent(persistConfig.entries.master.proxy)
+    new HttpsProxyAgent(process.env.HTTP_PROXY)
   : undefined
 
 const bots = botList.map((el) => ({

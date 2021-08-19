@@ -1,9 +1,12 @@
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import store, { storeMethods } from '../store/runtime'
-import { rand, sleep } from '../utils/lang'
+import { getUnixTimeStamp, rand, sleep } from '../utils/lang'
 import promiseRetry from 'promise-retry'
 import { Message } from 'telegram-typings'
 import configFile from '../utils/configFile'
+import { UnixTimeStamp } from '../utils/type'
+
+const lastRepeatTime: Record<number, UnixTimeStamp> = {}
 
 for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
   const bot = getTelegramBotByAnyBotName(botName)
@@ -35,34 +38,39 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
       }
     }
     const messageLength = ctx.message?.text?.length || 0
-    const messageLengthBonusDef = [0, 100, 70, 40, 10, 4].map((el) => el * 0.02)
+    const messageLengthBonusDef = [0, 100, 70, 40, 10, 4].map((el) => el * 0.5)
     const messageLengthBonus =
       messageLength >= messageLengthBonusDef.length
         ? -100
         : messageLengthBonusDef[messageLength] || 0
     const hasPhoto = ctx.message?.photo ? -100 : 0
-    const hasSticker = ctx.message?.sticker ? 2 : 0
+    const hasSticker = ctx.message?.sticker ? -100 : 0
     const hasDocument = ctx.message?.document ? -100 : 0
     const forwardCounterBonus = [2, 1.5, 0.9, 0.4, 0]
     const forwardCounterBonusChance =
       (5 - messageLength) *
       (forwardCounterBonus[store.chatHistory[chatId].nonRepeatCounter] || 0)
     const chance =
-      messageLengthBonus +
-      hasPhoto +
-      hasSticker +
-      hasDocument +
-      forwardCounterBonusChance
-    if (rand(0, 100) < chance || (sameMessageCount === 1 && chance > 0)) {
-      await sleep(rand(2000, 5000))
+      (messageLengthBonus +
+        hasPhoto +
+        hasSticker +
+        hasDocument +
+        forwardCounterBonusChance) *
+      Math.min(
+        (getUnixTimeStamp() - (lastRepeatTime[chatId] || 0)) / 1800000,
+        1
+      )
+    if (rand(0, 100) < chance || sameMessageCount === 1) {
       if (message) {
+        store.chatHistory[chatId].nonRepeatCounter = 0
+        lastRepeatTime[chatId] = getUnixTimeStamp()
+        await sleep(rand(2000, 5000))
         await ctx.telegram.sendCopy(message.chat.id, message)
         createMessageHistory({
           digest: createDigest(message),
           from: bot.bot.options.username || '',
         })
       }
-      store.chatHistory[chatId].nonRepeatCounter = 0
     } else {
       store.chatHistory[chatId].nonRepeatCounter++
     }

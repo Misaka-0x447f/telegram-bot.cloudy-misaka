@@ -1,7 +1,7 @@
 export { default as stringify } from 'json-stringify-safe'
 
-export const sleep = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms))
+export const sleep = (timeInMilliSecond: number) =>
+  new Promise((resolve) => setTimeout(resolve, timeInMilliSecond))
 
 export const rand = (start = 0, stop = 1) =>
   Math.random() * (stop - start) + start
@@ -24,3 +24,5 @@ export const selectCase = <T>(
 export const argsTypeValidation = (args: unknown[], rules: ((_: unknown) => boolean)[]) => args.every((val, key) => (rules[key] || (() => false))(val))
 
 export const isNumeric = (n: any): n is string => !isNaN(parseFloat(n)) && isFinite(n)
+
+export const getUnixTimeStamp = () => new Date().getTime()
