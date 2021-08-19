@@ -38,7 +38,7 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
       }
     }
     const messageLength = ctx.message?.text?.length || 0
-    const messageLengthBonusDef = [0, 100, 70, 40, 10, 4].map((el) => el * 0.5)
+    const messageLengthBonusDef = [0, 100, 70, 40, 10, 4].map((el) => el * 0.02)
     const messageLengthBonus =
       messageLength >= messageLengthBonusDef.length
         ? -100
