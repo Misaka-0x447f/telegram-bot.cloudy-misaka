@@ -12,7 +12,7 @@ const functions = {
  */
 export const runActionFunctions = (text: string) => {
   const regex = new RegExp(
-    `\${(?<function>${Object.keys(functions).join('|')})((?<args>.+?))}`,
+    `\\\${(?<function>${Object.keys(functions).join('|')})\\((?<args>.+?)\\)}`,
     'g'
   )
   const match = text.match(regex)
