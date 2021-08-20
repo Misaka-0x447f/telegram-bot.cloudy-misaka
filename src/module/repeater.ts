@@ -43,9 +43,9 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
       messageLength >= messageLengthBonusDef.length
         ? -100
         : messageLengthBonusDef[messageLength] || 0
-    const hasPhoto = ctx.message?.photo ? -100 : 0
-    const hasSticker = ctx.message?.sticker ? -100 : 0
-    const hasDocument = ctx.message?.document ? -100 : 0
+    const hasPhoto = ctx.message?.photo ? -Infinity : 0
+    const hasSticker = ctx.message?.sticker ? -Infinity : 0
+    const hasDocument = ctx.message?.document ? -Infinity : 0
     const forwardCounterBonus = [2, 1.5, 0.9, 0.4, 0]
     const forwardCounterBonusChance =
       (5 - messageLength) *
