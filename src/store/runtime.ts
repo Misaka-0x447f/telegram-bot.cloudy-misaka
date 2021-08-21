@@ -1,6 +1,6 @@
 import { isUndefined } from 'lodash-es'
 
-type MessageHistory = { digest: string; from: string }
+type MessageHistory = { digest: string | null; from: string }
 
 const store = {
   chatHistory: {} as Record<

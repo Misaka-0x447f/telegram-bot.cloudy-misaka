@@ -1,10 +1,11 @@
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import store, { storeMethods } from '../store/runtime'
-import { getUnixTimeStamp, rand, sleep } from '../utils/lang'
+import { getUnixTimeStamp, rand, sha1, sleep } from '../utils/lang'
 import promiseRetry from 'promise-retry'
 import { Message } from 'telegram-typings'
 import configFile from '../utils/configFile'
 import { UnixTimeStamp } from '../utils/type'
+import { isNull } from 'lodash-es'
 
 const lastRepeatTime: Record<number, UnixTimeStamp> = {}
 
@@ -15,9 +16,19 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
     const chatId = currentChat.id
     if (!chatId) return
     storeMethods.createChatHistoryIfNX(chatId)
-    const createDigest = (message: Message) =>
-      // @ts-ignore
-      (message?.sticker?.file_unique_id || '') + message.text
+    const createDigest = (message: Message) => {
+      const res = [
+        message?.sticker?.file_id,
+        message?.photo?.map((el) => el?.file_id).join(','),
+        message?.document?.file_id,
+        message?.voice?.file_id,
+        message.text,
+      ].map((el) => (el ? sha1(el) : null))
+      if (res.every(isNull)) {
+        return null
+      }
+      return JSON.stringify(res)
+    }
     const createMessageHistory = store.chatHistory[chatId].createMessageHistory
     createMessageHistory({
       digest: createDigest(message),
@@ -26,14 +37,15 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
     const historyObject = store.chatHistory[chatId].messageHistory
     let sameMessageCount = 0 // starts from -1, if no messages same return 0, if nothing to compare return -1.
     for (let i = 1; i < historyObject.length; i++) {
-      if (historyObject[i].digest === historyObject[i - 1].digest) {
-        sameMessageCount++
-      } else {
-        break
-      }
+      console.log(historyObject[i].from, bot.bot.options.username)
       if (historyObject[i].from === bot.bot.options.username) {
         // prevent repeat too many times.
         sameMessageCount = -1
+        break
+      }
+      if (historyObject[i] && historyObject[i].digest === historyObject[i - 1].digest) {
+        sameMessageCount++
+      } else {
         break
       }
     }
@@ -50,6 +62,8 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
     const forwardCounterBonusChance =
       (5 - messageLength) *
       (forwardCounterBonus[store.chatHistory[chatId].nonRepeatCounter] || 0)
+    console.log(createDigest(message))
+    console.log(sameMessageCount)
     const chance =
       (messageLengthBonus +
         hasPhoto +
@@ -60,12 +74,13 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
         (getUnixTimeStamp() - (lastRepeatTime[chatId] || 0)) / 1800000,
         1
       )
-    if (rand(0, 100) < chance || sameMessageCount === 1) {
+    if (chance > rand(0, 100) || sameMessageCount === 1) {
       if (message) {
         store.chatHistory[chatId].nonRepeatCounter = 0
         lastRepeatTime[chatId] = getUnixTimeStamp()
         await sleep(rand(2000, 5000))
         await ctx.telegram.sendCopy(message.chat.id, message)
+        // create history for bot itself.
         createMessageHistory({
           digest: createDigest(message),
           from: bot.bot.options.username || '',

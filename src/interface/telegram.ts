@@ -19,6 +19,10 @@ const agent = process.env.HTTP_PROXY
     new HttpsProxyAgent(process.env.HTTP_PROXY)
   : undefined
 
+if (process.env.HTTP_PROXY) {
+  console.log(`connecting to telegram via proxy ${process.env.HTTP_PROXY}`)
+}
+
 const bots = botList.map((el) => ({
   ...el,
   instance: new Telegraf(el.token, {
