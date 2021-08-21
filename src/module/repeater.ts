@@ -1,7 +1,6 @@
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import store, { storeMethods } from '../store/runtime'
 import { getUnixTimeStamp, rand, sha1, sleep } from '../utils/lang'
-import promiseRetry from 'promise-retry'
 import { Message } from 'telegram-typings'
 import configFile from '../utils/configFile'
 import { UnixTimeStamp } from '../utils/type'
@@ -79,6 +78,7 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
         store.chatHistory[chatId].nonRepeatCounter = 0
         lastRepeatTime[chatId] = getUnixTimeStamp()
         await sleep(rand(2000, 5000))
+        // TODO: deprecated api
         await ctx.telegram.sendCopy(message.chat.id, message)
         // create history for bot itself.
         createMessageHistory({
@@ -92,22 +92,16 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
   })
   // active repeater functions
   bot.message.sub(async ({ ctx, message, currentChat }) => {
-    const targetMessageId = message?.reply_to_message?.message_id
+    const targetMessage = message?.reply_to_message
     const chatId = currentChat?.id
-    if (!(message?.reply_to_message && message?.text?.match(/复读/))) return
+    if (!(targetMessage && message?.text?.match(/复读/))) return
     if (!chatId) return
-    if (!targetMessageId) {
+    if (!targetMessage) {
       await ctx.telegram.sendMessage(chatId, '目标消息被吃掉啦')
       return
     }
-    promiseRetry((retry, number) =>
-      ctx.telegram
-        .forwardMessage(chatId, chatId, targetMessageId)
-        .catch((e) => {
-          retry(e)
-          console.log(e)
-          console.log(`Attempting to retry ${number}`)
-        })
-    ).then()
+    // TODO: deprecated api
+    await ctx.telegram.sendCopy(message.chat.id, targetMessage)
+    await ctx.telegram.deleteMessage(message.chat.id, message.message_id).catch()
   })
 }
