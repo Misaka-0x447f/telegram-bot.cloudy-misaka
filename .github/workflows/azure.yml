@@ -19,12 +19,13 @@ on:
   push:
     branches:
       - master
+      - ci-test
   pull_request:
     branches:
       - master
 
 env:
-  NODE_VERSION: '14.x'                # set this to the node version to use
+  NODE_VERSION: '14'                # set this to the node version to use
 
 jobs:
   build-and-deploy:
@@ -33,26 +34,31 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Use Node.js ${{ env.NODE_VERSION }}
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v2
       with:
         node-version: ${{ env.NODE_VERSION }}
-    - name: npm install & build
+        cache: 'npm'
+    - name: npm install
+      run: npm ci
+    - name: npm build
+      run: npm run build
+    - name: Configure SSH
       run: |
-        npm install
-        npm run build
+        mkdir -p ~/.ssh/
+        echo "$SSH_KEY" > ~/.ssh/staging.key
+        chmod 600 ~/.ssh/staging.key
+        cat >>~/.ssh/config <<END
+        Host staging
+          HostName 78.142.194.8
+          User root
+          Port 17535
+          IdentityFile ~/.ssh/staging.key
+          StrictHostKeyChecking no
+        END
+      env:
+        SSH_KEY: ${{ secrets.HOSTKER_SECRET_KEY }}
     - name: deploy file
-      uses: wlixcc/SFTP-Deploy-Action@v1.0
-      with:
-        username: 'root'
-        server: '78.142.194.8'
-        port: 17535
-        ssh_private_key: ${{ secrets.HOSTKER_SECRET_KEY }}
-        local_path: './dist/*'
-        remote_path: '/var/node-app/misaka-telegram-bot'
-        args: '-o ConnectTimeout=5'
+      run: scp -r ./dist staging:/var/node-app/misaka-telegram-bot
     - name: restart
-      uses: JimCronqvist/action-ssh@master
-      with:
-        hosts: 'root@78.142.194.8:17535'
-        privateKey: ${{ secrets.HOSTKER_SECRET_KEY }}
-        command: source /root/.bashrc && pm2 restart 0
+      run: ssh staging "source /root/.bashrc && pm2 restart 0"
+      continue-on-error: true
