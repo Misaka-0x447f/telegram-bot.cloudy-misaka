@@ -154,7 +154,7 @@ const worker = async (botName: string) => {
         {
           ...tweet,
           sourceUrlIfNoUrlInTweetContent,
-          sourceUrlIfNoUrlInTweetContentWithLineBreak:
+          sourceUrlWithLineBreakIfNoUrlInTweetContent:
             '\n' + sourceUrlIfNoUrlInTweetContent,
         }
       )

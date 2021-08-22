@@ -3,7 +3,6 @@ import 'regenerator-runtime/runtime'
 import persistConfig from './utils/configFile'
 
 persistConfig.init()
-
 ;(async () => {
   const bot = await import('./interface/telegram')
   import('./module/bili-live')

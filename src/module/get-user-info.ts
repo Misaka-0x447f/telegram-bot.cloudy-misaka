@@ -26,8 +26,7 @@ for (const [botName, _] of Object.entries(
   const bot = getTelegramBotByAnyBotName(botName)
   bot.command.sub(async ({ ctx, meta: {args, commandName} }) => {
     if (commandName !== 'get_user_info' || !ctx.chat) return
-    // no white space
-    if (args[0]?.match(/^((?!\s).)*$/)) {
+    if (args[0]?.match(/^((?!\s).)+$/)) {
       bot.sendMessage(ctx.chat.id, '正在查询').then()
       try {
         const chatInfo = await bot.bot.telegram.getChat(parseInt(args[0]))

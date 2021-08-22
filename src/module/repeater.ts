@@ -36,7 +36,6 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
     const historyObject = store.chatHistory[chatId].messageHistory
     let sameMessageCount = 0 // starts from -1, if no messages same return 0, if nothing to compare return -1.
     for (let i = 1; i < historyObject.length; i++) {
-      console.log(historyObject[i].from, bot.bot.options.username)
       if (historyObject[i].from === bot.bot.options.username) {
         // prevent repeat too many times.
         sameMessageCount = -1
@@ -61,8 +60,6 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
     const forwardCounterBonusChance =
       (5 - messageLength) *
       (forwardCounterBonus[store.chatHistory[chatId].nonRepeatCounter] || 0)
-    console.log(createDigest(message))
-    console.log(sameMessageCount)
     const chance =
       (messageLengthBonus +
         hasPhoto +

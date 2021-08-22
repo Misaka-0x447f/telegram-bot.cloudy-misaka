@@ -29,7 +29,7 @@ const worker = async (
     }
   }
 
-  const info = {
+  const params = {
     title: res.title,
     category: res.area_name,
     desc: res.description,
@@ -43,13 +43,13 @@ const worker = async (
     await bot.runActions(
       config.onlineActions,
       { defaultChatId: config.dest! },
-      info
+      params
     )
   } else if (config.offlineActions && !isOnline && store.bili[id]?.wasOnline) {
     await bot.runActions(
       config.offlineActions,
       { defaultChatId: config.dest! },
-      info
+      params
     )
   }
 
@@ -61,7 +61,7 @@ const worker = async (
     await bot.runActions(
       config.categoryChangeActions,
       { defaultChatId: config.dest! },
-      info
+      params
     )
   }
 
@@ -69,7 +69,7 @@ const worker = async (
     await bot.runActions(
       config.titleChangeActions,
       { defaultChatId: config.dest! },
-      info
+      params
     )
   }
 

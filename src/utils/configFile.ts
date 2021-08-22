@@ -5,6 +5,7 @@
 import { TelegramBotName } from './type'
 import JSON5 from 'json5'
 import fsj from 'fs-jetpack'
+import * as tt from "telegraf/typings/telegram-types";
 
 enum configFilesType {
   'master',
@@ -16,7 +17,8 @@ export type Actions = ((
   | {
       type: 'message'
       text: string
-      filter: RegexString
+      filter?: RegexString,
+      extra?: tt.ExtraEditMessage
     }
   | {
       type: 'sleep'

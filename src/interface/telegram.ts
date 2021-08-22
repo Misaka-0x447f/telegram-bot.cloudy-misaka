@@ -79,7 +79,7 @@ const botFactory = (el: typeof bots[0]) => {
           commandName: commandMatchArray[1],
           chatId: message.chat.id,
           args: message
-            .text!.match(/\/\w+(?:\s?@\w+)?(.*)/)![1]
+            .text!.match(/\/\w+(?:\s?@\w+)? ?(.*)/)![1]
             .trim()
             .split(' '),
         },
@@ -139,10 +139,11 @@ const botFactory = (el: typeof bots[0]) => {
             )
             if (
               options.filterMethod &&
+              step.filter &&
               !options.filterMethod(text, step.filter)
             )
               return
-            await sendMessage(chatId, text)
+            await sendMessage(chatId, text, step?.extra)
           } else if (step.type === 'sleep') await sleep(step.time)
           else if (step.type === 'messageByForward')
             await promiseRetry((retry) =>
