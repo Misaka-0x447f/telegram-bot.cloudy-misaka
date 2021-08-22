@@ -55,4 +55,4 @@ jobs:
       with:
         hosts: 'root@78.142.194.8:17535'
         privateKey: ${{ secrets.HOSTKER_SECRET_KEY }}
-        command: pm2 restart 0
+        command: pm2 restart 0 || 'command pm2 restart exited'
