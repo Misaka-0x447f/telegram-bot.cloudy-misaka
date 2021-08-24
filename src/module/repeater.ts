@@ -36,7 +36,7 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
     const historyObject = store.chatHistory[chatId].messageHistory
     let sameMessageCount = 0 // starts from -1, if no messages same return 0, if nothing to compare return -1.
     for (let i = 1; i < historyObject.length; i++) {
-      if (historyObject[i].from === bot.bot.options.username) {
+      if (historyObject[i].from === bot.username) {
         // prevent repeat too many times.
         sameMessageCount = -1
         break
@@ -80,7 +80,7 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
         // create history for bot itself.
         createMessageHistory({
           digest: createDigest(message),
-          from: bot.bot.options.username || '',
+          from: bot.username,
         })
       }
     } else {

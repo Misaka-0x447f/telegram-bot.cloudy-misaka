@@ -4,12 +4,12 @@ import TypedEvent from '../utils/TypedEvent'
 import * as tt from 'telegraf/typings/telegram-types'
 import promiseRetry from 'promise-retry'
 import { Message } from 'telegram-typings'
-import persistConfig, { Actions, RegexString } from "../utils/configFile";
+import persistConfig, { Actions, RegexString } from '../utils/configFile'
 import { sleep } from '../utils/lang'
 import telemetry from '../utils/telemetry'
 import { TelegramBotName } from '../utils/type'
 import HttpsProxyAgent from 'https-proxy-agent'
-import { runActionFunctions } from "../utils/actionFunctions";
+import { runActionFunctions } from '../utils/actionFunctions'
 
 const botList: Array<{ name: TelegramBotName; token: string }> = persistConfig
   .entries.master.tokenTelegram as any
@@ -32,6 +32,8 @@ const bots = botList.map((el) => ({
   }),
 }))
 
+const botUsernameTable: Partial<Record<TelegramBotName, string>> = {}
+
 // username enables receiving group message. https://github.com/telegraf/telegraf/issues/134
 // note: you will need to kick bot then invite it again to receive group message.
 // https://github.com/yagop/node-telegram-bot-api/issues/174
@@ -39,6 +41,7 @@ bots.forEach((bot) => {
   bot.instance.telegram.getMe().then((botInfo) => {
     console.log(`Connected to ${botInfo.username}`)
     bot.instance.options.username = botInfo.username
+    botUsernameTable[bot.name] = botInfo.username!
   })
 
   bot.instance.startPolling(30, 100)
@@ -96,22 +99,28 @@ const botFactory = (el: typeof bots[0]) => {
     })
   })
 
-  const sendMessage = (
-    chatId: number,
-    text: string,
-    extra?: tt.ExtraEditMessage
-  ) =>
-    promiseRetry((retry) =>
-      el.instance.telegram.sendMessage(chatId, text, extra).catch(retry)
-    )
+  function retryableMethodFactory<T extends Function>(method: T) {
+    // @ts-ignore
+    return (...params: Parameters<T>) =>
+      promiseRetry((retry) => method(...params).catch(retry))
+  }
+
+  // fxxk 'this'.
+  const sendMessage = retryableMethodFactory(
+    el.instance.telegram.sendMessage.bind(el.instance.telegram)
+  )
 
   return {
     ...eventBus,
-    bot: el.instance,
-    sendMessage,
-    self: {
-      username: el.instance.options.username!,
+    instance: el.instance,
+    alias: el.name,
+    get username() {
+      return botUsernameTable[el.name]!
     },
+    sendMessage,
+    forwardMessage: retryableMethodFactory(
+      el.instance.telegram.forwardMessage.bind(el.instance.telegram)
+    ),
     runActions: (
       actions: Actions,
       options: {

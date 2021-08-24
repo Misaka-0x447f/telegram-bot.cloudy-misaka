@@ -26,7 +26,7 @@ const createWorker = (worker: BotType) =>
       await worker.sendMessage(meta.chatId, 'File not found.')
       return
     }
-    const fileLink = await worker.bot.telegram.getFileLink(fileId)
+    const fileLink = await worker.instance.telegram.getFileLink(fileId)
     // const filePath = path.join(
     //   os.tmpdir(),
     //   `telegram-${meta.chatId}-${ctx.message.message_id.toString()}.webp`

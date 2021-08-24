@@ -8,7 +8,7 @@ for (const [botName, config] of Object.entries(configs)) {
   bot.message.sub(async ({ message, currentChat}) => {
     const isPing =
       (message.text?.includes('/ping') && message.chat.type === 'private') ||
-      (message.text?.includes(`/ping@${bot.self.username}`) &&
+      (message.text?.includes(`/ping@${bot.username}`) &&
         message.chat.type !== 'private')
     if (!isPing) return
     bot.runActions(config.actions, {defaultChatId: currentChat.id}, {utcDate: new Date().toUTCString()}).then()

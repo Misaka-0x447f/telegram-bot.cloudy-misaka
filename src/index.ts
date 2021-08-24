@@ -19,7 +19,7 @@ persistConfig.init()
 
   const gracefulStopHandler = () => {
     for (const operator of Object.values(bot.default)) {
-      operator.bot.stop().then()
+      operator.instance.stop().then()
     }
   }
   process.once('SIGINT', gracefulStopHandler)

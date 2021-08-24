@@ -17,7 +17,7 @@ export default async (...log: any[]) => {
     configFile.entries.master.insight.telegramSupervisor.map((target) =>
       promiseRetry(
         (retry) =>
-          bot.misaka.bot.telegram.sendMessage(target, res).catch(retry),
+          bot.misaka.instance.telegram.sendMessage(target, res).catch(retry),
       ).then()
     )
   )

@@ -29,7 +29,7 @@ for (const [botName, _] of Object.entries(
     if (args[0]?.match(/^((?!\s).)+$/)) {
       bot.sendMessage(ctx.chat.id, '正在查询').then()
       try {
-        const chatInfo = await bot.bot.telegram.getChat(parseInt(args[0]))
+        const chatInfo = await bot.instance.telegram.getChat(parseInt(args[0]))
         await bot.sendMessage(ctx.chat.id, chatIdInfo(chatInfo))
       } catch (e) {
         if (e.description === 'Bad Request: chat not found') {
