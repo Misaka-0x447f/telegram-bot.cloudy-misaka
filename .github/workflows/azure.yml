@@ -59,6 +59,3 @@ jobs:
         SSH_KEY: ${{ secrets.HOSTKER_SECRET_KEY }}
     - name: deploy file
       run: scp -r ./dist staging:/var/node-app/misaka-telegram-bot
-    - name: restart
-      run: ssh staging "source /root/.bashrc && pm2 restart 0"
-      continue-on-error: true
