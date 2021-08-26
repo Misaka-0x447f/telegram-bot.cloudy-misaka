@@ -58,4 +58,4 @@ jobs:
       env:
         SSH_KEY: ${{ secrets.HOSTKER_SECRET_KEY }}
     - name: deploy file
-      run: scp -r ./dist staging:/var/node-app/misaka-telegram-bot
+      run: scp -r ./dist/* staging:/var/node-app/misaka-telegram-bot
