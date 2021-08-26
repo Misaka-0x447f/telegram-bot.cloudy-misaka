@@ -1,14 +1,7 @@
 import { BotType, getTelegramBotByAnyBotName } from '../interface/telegram'
 import errorMessages from '../utils/errorMessages'
 import configFile from '../utils/configFile'
-// import * as os from 'os'
-// import { download } from '../utils/file'
-// import * as fs from 'fs'
-// import execa from 'execa'
-// import * as path from 'path'
-// @ts-ignore
-// import dwebpName from '../../bin/dwebp-1.2.0-rc3.binary'
-
+import { downloadStream } from "../utils/file";
 const paramDefinition = { replyMessageType: '贴纸。' }
 
 const createWorker = (worker: BotType) =>
@@ -26,21 +19,10 @@ const createWorker = (worker: BotType) =>
       await worker.sendMessage(meta.chatId, 'File not found.')
       return
     }
+    worker.instance.telegram.sendChatAction(meta.chatId, 'upload_photo').then()
     const fileLink = await worker.instance.telegram.getFileLink(fileId)
-    // const filePath = path.join(
-    //   os.tmpdir(),
-    //   `telegram-${meta.chatId}-${ctx.message.message_id.toString()}.webp`
-    // )
-    // const targetFilePath = path.join(
-    //   os.tmpdir(),
-    //   `telegram-${meta.chatId}-${ctx.message.message_id.toString()}.png`
-    // )
-    await worker.sendMessage(meta.chatId, fileLink)
-    // await download(fileLink, filePath)
-    // fs.chmodSync(path.join(__dirname, dwebpName), '755')
-    // execa(path.join(__dirname, dwebpName), ['-o', targetFilePath, filePath])
-    // await ctx.telegram.sendPhoto(meta.chatId, targetFilePath)
-    // fs.unlinkSync(targetFilePath)
+    const stream = await downloadStream(fileLink)
+    await worker.instance.telegram.sendPhoto(meta.chatId, {source: stream})
   })
 
 const config = configFile.entries.master.fetchSticker

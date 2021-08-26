@@ -1,21 +1,14 @@
 import got from 'got'
-import { createWriteStream } from 'fs'
+import { HttpsProxyAgent } from 'hpagent'
 
-export const download = (url: string, dest: string) =>
-  new Promise((resolve, reject) => {
-    const downloadStream = got.stream(url)
-    const fileWriterStream = createWriteStream(dest)
-
-    downloadStream
-      .on('error', (error) => {
-        reject(error)
-      })
-
-    fileWriterStream
-      .on('error', (error: Error) => {
-        reject(error)
-      })
-      .on('finish', resolve)
-
-    downloadStream.pipe(fileWriterStream)
+export const downloadStream = (url: string) =>
+  got.stream({
+    url,
+    agent: process.env.HTTP_PROXY
+      ? {
+          https: new HttpsProxyAgent({
+            proxy: process.env.HTTP_PROXY,
+          }),
+        }
+      : {},
   })
