@@ -41,7 +41,7 @@ jobs:
     - name: npm install
       run: npm ci
     - name: npm build
-      run: npm run build
+      run: npm run build:js
     - name: Configure SSH
       run: |
         mkdir -p ~/.ssh/
