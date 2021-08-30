@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+
 export { default as stringify } from 'json-stringify-safe'
 
 export const sleep = (timeInMilliSecond: number) =>
@@ -22,9 +23,13 @@ export const selectCase = <T>(
   }
 }
 
-export const argsTypeValidation = (args: unknown[], rules: ((_: unknown) => boolean)[]) => args.every((val, key) => (rules[key] || (() => false))(val))
+export const argsTypeValidation = (
+  args: unknown[],
+  rules: ((_: unknown) => boolean)[]
+) => args.every((val, key) => (rules[key] || (() => false))(val))
 
-export const isNumeric = (n: any): n is string => !isNaN(parseFloat(n)) && isFinite(n)
+export const isNumeric = (n: any): n is string =>
+  !isNaN(parseFloat(n)) && isFinite(n)
 
 export const getUnixTimeStamp = () => new Date().getTime()
 
@@ -32,4 +37,15 @@ export const sha1 = (text: string) => {
   const sha1tool = crypto.createHash('sha1')
   sha1tool.update(text)
   return sha1tool.digest('hex')
+}
+
+export const tryCatchReturn = <T>(
+  tryFunction: () => T,
+  catchFunction: (_: Error) => T
+) => {
+  try {
+    return tryFunction()
+  } catch (e) {
+    return catchFunction(e)
+  }
 }

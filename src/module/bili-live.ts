@@ -39,13 +39,21 @@ const worker = async (
     ),
   }
 
-  if (config.onlineActions && isOnline && !store.bili[id]?.wasOnline) {
+  const events = {
+    online: isOnline && !store.bili[id]?.wasOnline,
+    offline: !isOnline && store.bili[id]?.wasOnline,
+    categoryChange: res.area_name !== store.bili[id].lastCategory &&
+      store.bili[id].lastCategory,
+    titleChange: res.title !== store.bili[id].lastTitle,
+  }
+
+  if (config.onlineActions && events.online) {
     await bot.runActions(
       config.onlineActions,
       { defaultChatId: config.dest! },
       params
     )
-  } else if (config.offlineActions && !isOnline && store.bili[id]?.wasOnline) {
+  } else if (config.offlineActions && events.offline) {
     await bot.runActions(
       config.offlineActions,
       { defaultChatId: config.dest! },
@@ -55,8 +63,7 @@ const worker = async (
 
   if (
     config.categoryChangeActions &&
-    res.area_name !== store.bili[id].lastCategory &&
-    store.bili[id].lastCategory
+    events.categoryChange && !events.online
   ) {
     await bot.runActions(
       config.categoryChangeActions,
@@ -65,7 +72,7 @@ const worker = async (
     )
   }
 
-  if (config.titleChangeActions && res.title !== store.bili[id].lastTitle) {
+  if (config.titleChangeActions && events.titleChange && !events.online) {
     await bot.runActions(
       config.titleChangeActions,
       { defaultChatId: config.dest! },
