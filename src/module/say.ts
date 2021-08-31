@@ -132,7 +132,11 @@ for (const [botName, config] of Object.entries(configs)) {
             }
           : {}
       )
-      await bot.sendMessage(chatId, stringify(res))
+      await Promise.all(
+        config.allowUser?.map((user) =>
+          bot.sendMessage(user, stringify(res))
+        ) || []
+      )
       replyTargetStore.messageId = null
       replyTargetStore.chatId = null
     } catch (e) {
