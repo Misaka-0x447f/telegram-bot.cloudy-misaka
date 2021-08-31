@@ -74,8 +74,8 @@ const data: {
             name: string
             id: number
           }>
-          allowUser?: number[]
-          allowUsersCanReceiveReply?: true
+          adminChatIds?: number[]
+          adminChatIdsCanReceiveReply?: true
         }
       >
       start: Record<TelegramBotName, Record<'actions', Actions>>

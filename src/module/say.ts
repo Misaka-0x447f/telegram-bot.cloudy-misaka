@@ -34,8 +34,8 @@ for (const [botName, config] of Object.entries(configs)) {
   bot.message.sub(async ({ message, currentChat, meta }) => {
     const isPrivate = message.chat.type === 'private'
     if (
-      !config.allowUsersCanReceiveReply ||
-      (config.allowUser?.includes(currentChat.id) && isPrivate)
+      !config.adminChatIdsCanReceiveReply ||
+      (config.adminChatIds?.includes(currentChat.id) && isPrivate)
     )
       return
     if (
@@ -45,7 +45,7 @@ for (const [botName, config] of Object.entries(configs)) {
     ) {
       const shortcut = config.list.find((el) => el.id === meta.chatId)?.name
 
-      for (const el of config.allowUser || []) {
+      for (const el of config.adminChatIds || []) {
         await bot.forwardMessage(el, meta.chatId, message.message_id)
         await bot.sendMessage(
           el,
@@ -99,7 +99,7 @@ for (const [botName, config] of Object.entries(configs)) {
       replyMessageType: '发送内容。',
     }
     if (commandName !== 'say' || !chatId) return
-    if (config.allowUser && !config.allowUser.includes(chatId)) {
+    if (config.adminChatIds && !config.adminChatIds.includes(chatId)) {
       await bot.sendMessage(chatId, 'Permission denied.')
       return
     }
@@ -133,7 +133,7 @@ for (const [botName, config] of Object.entries(configs)) {
           : {}
       )
       await Promise.all(
-        config.allowUser?.map((user) =>
+        config.adminChatIds?.map((user) =>
           bot.sendMessage(user, stringify(res))
         ) || []
       )
