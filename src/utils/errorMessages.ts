@@ -1,5 +1,5 @@
 export interface ParamsDefinition {
-  argumentList?: Array<{ name: string; acceptable: string }>
+  argumentList?: Array<{ name: string; acceptable: string, optional?: true }>
   replyMessageType?: string
 }
 
@@ -11,8 +11,9 @@ const getHelpMessage = (params: ParamsDefinition) => {
     }, 0)
     content.push('该命令需要以下参数：')
     params.argumentList.forEach((el) => {
-      content.push(`[${el.name}]`.padEnd(maxLength + 3).concat(el.acceptable))
+      content.push(`[${el.name}]${el.optional ? '?' : ''}`.padEnd(maxLength + 5).concat(el.acceptable))
     })
+    if (params.argumentList.some(el => el.optional)) content.push('其中带有 ? 标记的为可选参数。')
   }
   if (params.replyMessageType) {
     content.push(`该命令需要回复 1 条消息，用于指定${params.replyMessageType}`)
