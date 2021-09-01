@@ -41,6 +41,7 @@ for (const [botName, config] of Object.entries(configs)) {
     if (
       (message.reply_to_message &&
         message.reply_to_message?.from?.username === bot.username) ||
+      message.text?.includes(`@${bot.username}`) ||
       isPrivate
     ) {
       const shortcut = config.list.find((el) => el.id === meta.chatId)?.name
