@@ -13,7 +13,7 @@ persistConfig.init()
   import('./module/ping')
   import('./module/repeater')
   import('./module/say')
-  import('./module/send-message-on-http-request')
+  import('./module/legacy/send-message-on-http-request')
   import('./module/start')
   import('./module/twitter-forwarding')
 

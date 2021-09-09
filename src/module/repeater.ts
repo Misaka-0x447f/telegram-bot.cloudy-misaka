@@ -11,10 +11,9 @@ const lastRepeatTime: Record<number, UnixTimeStamp> = {}
 for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
   const bot = getTelegramBotByAnyBotName(botName)
   // passive repeater functions
-  bot.message.sub(async ({ ctx, message, currentChat }) => {
-    const chatId = currentChat.id
-    if (!chatId) return
-    storeMethods.createChatHistoryIfNX(chatId)
+  bot.message.sub(async ({ ctx, message, currentChatId }) => {
+    if (!currentChatId) return
+    storeMethods.createChatHistoryIfNX(currentChatId)
     const createDigest = (message: Message) => {
       const res = [
         message?.sticker?.file_id,
@@ -28,12 +27,12 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
       }
       return JSON.stringify(res)
     }
-    const createMessageHistory = store.chatHistory[chatId].createMessageHistory
+    const createMessageHistory = store.chatHistory[currentChatId].createMessageHistory
     createMessageHistory({
       digest: createDigest(message),
       from: message.from?.username || '',
     })
-    const historyObject = store.chatHistory[chatId].messageHistory
+    const historyObject = store.chatHistory[currentChatId].messageHistory
     let sameMessageCount = 0 // starts from -1, if no messages same return 0, if nothing to compare return -1.
     for (let i = 1; i < historyObject.length; i++) {
       if (historyObject[i].from === bot.username) {
@@ -59,7 +58,7 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
     const forwardCounterBonus = [2, 1.5, 0.9, 0.4, 0]
     const forwardCounterBonusChance =
       (5 - messageLength) *
-      (forwardCounterBonus[store.chatHistory[chatId].nonRepeatCounter] || 0)
+      (forwardCounterBonus[store.chatHistory[currentChatId].nonRepeatCounter] || 0)
     const chance =
       (messageLengthBonus +
         hasPhoto +
@@ -67,13 +66,13 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
         hasDocument +
         forwardCounterBonusChance) *
       Math.min(
-        (getUnixTimeStamp() - (lastRepeatTime[chatId] || 0)) / 1800000,
+        (getUnixTimeStamp() - (lastRepeatTime[currentChatId] || 0)) / 1800000,
         1
       )
     if (chance > rand(0, 100) || sameMessageCount === 1) {
       if (message) {
-        store.chatHistory[chatId].nonRepeatCounter = 0
-        lastRepeatTime[chatId] = getUnixTimeStamp()
+        store.chatHistory[currentChatId].nonRepeatCounter = 0
+        lastRepeatTime[currentChatId] = getUnixTimeStamp()
         await sleep(rand(2000, 5000))
         // TODO: deprecated api
         await ctx.telegram.sendCopy(message.chat.id, message)
@@ -84,7 +83,7 @@ for (const [botName, _] of Object.entries(configFile.entries.master.repeater)) {
         })
       }
     } else {
-      store.chatHistory[chatId].nonRepeatCounter++
+      store.chatHistory[currentChatId].nonRepeatCounter++
     }
   })
   // active repeater functions

@@ -25,8 +25,8 @@ export default {
   illegalArgumentCount: (expected: string | number, actual: string | number, params: ParamsDefinition) =>
     `不合法的参数。需要 ${expected} 个参数，实际存在 ${actual} 个参数。\n${getHelpMessage(params)}`,
   illegalReplyMessageCount: (params: ParamsDefinition) =>
-    '不合法的回复消息。该命令需要 1 条回复消息，实际没有回复任何消息。\n' +
-    `例如先发送 av39092411，再回复该消息并选择命令 /fetch_video。\n${getHelpMessage(params)}`,
+    '不合法的回复消息。该命令需要 1 条回复消息，实际没有回复任何消息。' +
+    `\n${getHelpMessage(params)}`,
   illegalArguments: (params: ParamsDefinition) => `不合法的参数。\n${getHelpMessage(params)}`,
   illegalReplyMessage: (params: ParamsDefinition) => `不合法的回复消息。\n${getHelpMessage(params)}`
 }

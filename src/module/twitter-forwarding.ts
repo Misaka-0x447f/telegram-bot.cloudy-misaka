@@ -25,7 +25,7 @@ const historyTweetCountCommand = 'configure_history_tweet_count'
 
 for (const [botName, config] of Object.entries(configs)) {
   const bot = getTelegramBotByAnyBotName(botName)
-  bot.command.sub(async ({ ctx, meta: { commandName, args } }) => {
+  bot.command.sub(async ({ ctx, commandName, args }) => {
     const paramsDefinition: ParamsDefinition = {
       argumentList: [
         {

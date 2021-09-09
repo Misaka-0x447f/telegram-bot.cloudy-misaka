@@ -5,24 +5,24 @@ import { downloadStream } from "../utils/file";
 const paramDefinition = { replyMessageType: '贴纸。' }
 
 const createWorker = (worker: BotType) =>
-  worker.command.sub(async ({ ctx, meta }) => {
-    if (meta.commandName !== 'fetch_sticker') return
+  worker.command.sub(async ({ ctx, currentChatId, sendMessageToCurrentChat, commandName }) => {
+    if (commandName !== 'fetch_sticker') return
     if (!ctx.message?.reply_to_message) {
-      errorMessages.illegalReplyMessageCount(paramDefinition)
+      await sendMessageToCurrentChat(errorMessages.illegalReplyMessageCount(paramDefinition))
       return
     }
     if (!ctx.message.reply_to_message.sticker) {
-      errorMessages.illegalReplyMessage(paramDefinition)
+      await sendMessageToCurrentChat(errorMessages.illegalReplyMessage(paramDefinition))
     }
     const fileId = ctx.message.reply_to_message.sticker?.file_id
     if (!fileId) {
-      await worker.sendMessage(meta.chatId, 'File not found.')
+      await sendMessageToCurrentChat('File not found.')
       return
     }
-    worker.instance.telegram.sendChatAction(meta.chatId, 'upload_photo').then()
+    worker.instance.telegram.sendChatAction(currentChatId, 'upload_photo').then()
     const fileLink = await worker.instance.telegram.getFileLink(fileId)
     const stream = await downloadStream(fileLink)
-    await worker.instance.telegram.sendPhoto(meta.chatId, {source: stream})
+    await worker.instance.telegram.sendPhoto(currentChatId, {source: stream})
   })
 
 const config = configFile.entries.master.fetchSticker

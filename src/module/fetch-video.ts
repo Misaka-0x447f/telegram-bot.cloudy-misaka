@@ -36,12 +36,11 @@ const paramDefinition = {replyMessageType: 'av 号或 bv 号。例如：av390924
 const botNames = Object.keys(configFile.entries.master.fetchVideo)
 
 botNames.forEach((el) =>
-  getTelegramBotByAnyBotName(el).command.sub(async ({ ctx, meta }) => {
-    if (meta.commandName !== 'fetch_video' || !ctx.chat?.id) return
+  getTelegramBotByAnyBotName(el).command.sub(async ({ ctx, commandName, sendMessageToCurrentChat }) => {
+    if (commandName !== 'fetch_video' || !ctx.chat?.id) return
     const reply = ctx.message?.reply_to_message
     if (!reply?.text) {
-      await ctx.telegram.sendMessage(
-        ctx.chat?.id,
+      await sendMessageToCurrentChat(
         errorMessages.illegalReplyMessageCount(paramDefinition)
       )
       return
@@ -53,11 +52,10 @@ botNames.forEach((el) =>
       const res = await getVideoDetail(
         isAv ? { aid: result[2] } : { bvid: result[2] }
       )
-      await ctx.telegram.sendMessage(ctx.chat?.id, biliVideoDetailAdapter(res))
+      await sendMessageToCurrentChat(biliVideoDetailAdapter(res))
       return
     }
-    await ctx.telegram.sendMessage(
-      ctx.chat?.id,
+    await sendMessageToCurrentChat(
       errorMessages.illegalReplyMessage(paramDefinition)
     )
   })

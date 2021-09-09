@@ -1,5 +1,5 @@
 import configFile from '../utils/configFile'
-import { getTelegramBotByAnyBotName } from '../interface/telegram'
+import { getTelegramBotByAnyBotName } from "../interface/telegram";
 import errorMessages, { ParamsDefinition } from '../utils/errorMessages'
 import { isNumeric, stringify, tryCatchReturn } from '../utils/lang'
 import { Chat } from 'telegraf/typings/telegram-types'
@@ -31,7 +31,7 @@ const chatInfoString = (chat: Chat, message: Message, shortcut?: string) =>
 
 for (const [botName, config] of Object.entries(configs)) {
   const bot = getTelegramBotByAnyBotName(botName)
-  bot.message.sub(async ({ message, currentChat, meta }) => {
+  bot.message.sub(async ({ message, currentChat, currentChatId }) => {
     const isPrivate = message.chat.type === 'private'
     if (
       !config.adminChatIdsCanReceiveReply ||
@@ -44,10 +44,10 @@ for (const [botName, config] of Object.entries(configs)) {
       message.text?.includes(`@${bot.username}`) ||
       isPrivate
     ) {
-      const shortcut = config.list.find((el) => el.id === meta.chatId)?.name
+      const shortcut = config.list.find((el) => el.id === currentChatId)?.name
 
       for (const el of config.adminChatIds || []) {
-        await bot.forwardMessage(el, meta.chatId, message.message_id)
+        await bot.forwardMessage(el, currentChatId, message.message_id)
         await bot.sendMessage(
           el,
           chatInfoString(currentChat, message, shortcut)
@@ -55,7 +55,7 @@ for (const [botName, config] of Object.entries(configs)) {
       }
     }
   })
-  bot.command.sub(async ({ ctx, meta: { commandName, chatId } }) => {
+  bot.command.sub(async ({ ctx, commandName, sendMessageToCurrentChat }) => {
     const paramDefinition = {
       replyMessageType:
         '以 yaml 格式储存的，包含 chatId 和 messageId 键的消息。这些信息被使用一次后将会从内存中清除。',
@@ -71,20 +71,18 @@ for (const [botName, config] of Object.entries(configs)) {
       !parseInt(parseResult?.chatId) ||
       !parseInt(parseResult?.messageId)
     ) {
-      await bot.sendMessage(
-        chatId,
+      await sendMessageToCurrentChat(
         errorMessages.illegalReplyMessageCount(paramDefinition)
       )
       return
     }
     replyTargetStore.chatId = parseInt(parseResult.chatId)
     replyTargetStore.messageId = parseInt(parseResult.messageId)
-    await bot.sendMessage(
-      chatId,
+    await sendMessageToCurrentChat(
       `成功。\n${formatYaml.render(replyTargetStore, { noColor: true })}`
     )
   })
-  bot.command.sub(async ({ ctx, meta: { commandName, args, chatId } }) => {
+  bot.command.sub(async ({ ctx, commandName, args, currentChatId, sendMessageToCurrentChat }) => {
     const paramDefinition: ParamsDefinition = {
       argumentList: [
         {
@@ -99,9 +97,9 @@ for (const [botName, config] of Object.entries(configs)) {
       ],
       replyMessageType: '发送内容。',
     }
-    if (commandName !== 'say' || !chatId) return
-    if (config.adminChatIds && !config.adminChatIds.includes(chatId)) {
-      await bot.sendMessage(chatId, 'Permission denied.')
+    if (commandName !== 'say' || !currentChatId) return
+    if (config.adminChatIds && !config.adminChatIds.includes(currentChatId)) {
+      await sendMessageToCurrentChat('Permission denied.')
       return
     }
     if (
@@ -109,16 +107,14 @@ for (const [botName, config] of Object.entries(configs)) {
       !config.list.find((el) => args[0] === el.name) &&
       !replyTargetStore.chatId
     ) {
-      await bot.sendMessage(
-        chatId,
+      await sendMessageToCurrentChat(
         errorMessages.illegalArguments(paramDefinition)
       )
       return
     }
     const predefinedTarget = config.list.find((el) => el.name === args[0])?.id
     if (!ctx.message?.reply_to_message) {
-      await bot.sendMessage(
-        chatId,
+      await sendMessageToCurrentChat(
         errorMessages.illegalReplyMessageCount(paramDefinition)
       )
       return
@@ -141,7 +137,7 @@ for (const [botName, config] of Object.entries(configs)) {
       replyTargetStore.messageId = null
       replyTargetStore.chatId = null
     } catch (e) {
-      await bot.sendMessage(chatId, stringify(e))
+      await sendMessageToCurrentChat(stringify(e))
       console.log(e)
     }
   })

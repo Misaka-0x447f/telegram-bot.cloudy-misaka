@@ -24,28 +24,26 @@ for (const [botName, _] of Object.entries(
   configFile.entries.master.getUserInfo
 )) {
   const bot = getTelegramBotByAnyBotName(botName)
-  bot.command.sub(async ({ ctx, meta: {args, commandName} }) => {
+  bot.command.sub(async ({ ctx, args, commandName, sendMessageToCurrentChat }) => {
     if (commandName !== 'get_user_info' || !ctx.chat) return
     if (args[0]?.match(/^((?!\s).)+$/)) {
       bot.sendMessage(ctx.chat.id, '正在查询').then()
       try {
         const chatInfo = await bot.instance.telegram.getChat(parseInt(args[0]))
-        await bot.sendMessage(ctx.chat.id, chatIdInfo(chatInfo))
+        await sendMessageToCurrentChat(chatIdInfo(chatInfo))
       } catch (e) {
         if (e.description === 'Bad Request: chat not found') {
-          await bot.sendMessage(
-            ctx.chat?.id!,
+          await sendMessageToCurrentChat(
             '会话不存在。请注意，如果我没有加入目标群或者没有和目标用户对话过，则无法查询到信息。'
           )
         } else {
-          await bot.sendMessage(ctx.chat?.id!, JSON.stringify(e))
+          await sendMessageToCurrentChat( JSON.stringify(e))
         }
       }
     } else if (!args[0]) {
-      await bot.sendMessage(ctx.chat.id, chatIdInfo(ctx.chat)).then()
+      await sendMessageToCurrentChat(chatIdInfo(ctx.chat)).then()
     } else {
-      await bot.sendMessage(
-        ctx.chat.id,
+      await sendMessageToCurrentChat(
         errorMessages.illegalArguments(paramDefinition)
       )
     }

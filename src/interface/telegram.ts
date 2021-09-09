@@ -1,4 +1,4 @@
-import { Telegraf } from 'telegraf'
+import { Telegraf, Telegram } from 'telegraf'
 import { TelegrafContext } from 'telegraf/typings/context'
 import TypedEvent from '../utils/TypedEvent'
 import * as tt from 'telegraf/typings/telegram-types'
@@ -7,7 +7,7 @@ import { Message } from 'telegram-typings'
 import persistConfig, { Actions, RegexString } from '../utils/configFile'
 import { sleep } from '../utils/lang'
 import telemetry from '../utils/telemetry'
-import { TelegramBotName } from '../utils/type'
+import { TelegramBotName, TupleOmitFirst } from '../utils/type'
 import HttpsProxyAgent from 'https-proxy-agent'
 import { runActionFunctions } from '../utils/actionFunctions'
 
@@ -47,21 +47,43 @@ bots.forEach((bot) => {
   bot.instance.startPolling(30, 100)
 })
 
+interface CommonProperties {
+  ctx: TelegrafContext
+  message: NonNullable<Message>
+  currentChat: tt.Chat
+  currentChatId: number
+  sendMessageToCurrentChat: (
+    ..._: TupleOmitFirst<Parameters<Telegram['sendMessage']>>
+  ) => ReturnType<Telegram['sendMessage']>
+}
+
 const eventBusFactory = () => ({
-  message: TypedEvent<{
-    ctx: TelegrafContext
-    message: NonNullable<Message>
-    currentChat: tt.Chat
-    meta: { isCommand: boolean; chatId: number }
-  }>(),
-  command: TypedEvent<{
-    ctx: TelegrafContext
-    meta: { commandName: string; args: string[]; chatId: number }
-  }>(),
+  message: TypedEvent<
+    {
+      isCommand: boolean
+    } & CommonProperties
+  >(),
+  command: TypedEvent<
+    {
+      commandName: string
+      args: string[]
+    } & CommonProperties
+  >(),
 })
 
 const botFactory = (el: typeof bots[0]) => {
   const eventBus = eventBusFactory()
+
+  function retryableMethodFactory<T extends (..._: any[]) => any>(method: T) {
+    // @ts-ignore
+    return (...params: Parameters<T>) =>
+      promiseRetry((retry) => method(...params).catch(retry)) as ReturnType<T>
+  }
+
+  // fxxk 'this'.
+  const sendMessage = retryableMethodFactory(
+    el.instance.telegram.sendMessage.bind(el.instance.telegram)
+  )
 
   el.instance.on('message', (ctx) => {
     const currentChat = ctx.update.message?.chat
@@ -75,40 +97,31 @@ const botFactory = (el: typeof bots[0]) => {
         new RegExp(`^\\/(\\w+).*@${el.instance.options.username}$`)
       )
 
+    const commonProperties = {
+      ctx,
+      message,
+      sendMessageToCurrentChat: (
+        ...params: TupleOmitFirst<Parameters<Telegram['sendMessage']>>
+      ) => sendMessage(message.chat.id, ...params),
+      currentChat,
+      currentChatId: message.chat.id,
+    }
+
     if (commandMatchArray) {
       eventBus.command.dispatch({
-        ctx,
-        meta: {
-          commandName: commandMatchArray[1],
-          chatId: message.chat.id,
-          args: message
-            .text!.match(/\/\w+(?:\s?@\w+)? ?(.*)/)![1]
-            .trim()
-            .split(' '),
-        },
+        ...commonProperties,
+        commandName: commandMatchArray[1],
+        args: message
+          .text!.match(/\/\w+(?:\s?@\w+)? ?(.*)/)![1]
+          .trim()
+          .split(' '),
       })
     }
     eventBus.message.dispatch({
-      ctx,
-      message,
-      currentChat,
-      meta: {
-        chatId: message.chat.id,
-        isCommand: !!commandMatchArray,
-      },
+      ...commonProperties,
+      isCommand: !!commandMatchArray,
     })
   })
-
-  function retryableMethodFactory<T extends Function>(method: T) {
-    // @ts-ignore
-    return (...params: Parameters<T>) =>
-      promiseRetry((retry) => method(...params).catch(retry))
-  }
-
-  // fxxk 'this'.
-  const sendMessage = retryableMethodFactory(
-    el.instance.telegram.sendMessage.bind(el.instance.telegram)
-  )
 
   return {
     ...eventBus,
