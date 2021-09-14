@@ -77,7 +77,7 @@ const botFactory = (el: typeof bots[0]) => {
   function retryableMethodFactory<T extends (..._: any[]) => any>(method: T) {
     // @ts-ignore
     return (...params: Parameters<T>) =>
-      promiseRetry((retry) => method(...params).catch(retry)) as ReturnType<T>
+      promiseRetry((retry) => method(...params).catch(retry), {retries: 3, factor: 5}) as ReturnType<T>
   }
 
   // fxxk 'this'.
