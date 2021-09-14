@@ -1,17 +1,4 @@
-import { isUndefined } from 'lodash-es'
-
-type MessageHistory = { digest: string | null; from: string }
-
 const store = {
-  chatHistory: {} as Record<
-    number,
-    {
-      nonRepeatCounter: number
-      messageHistory: Array<MessageHistory>
-      // eslint-disable-next-line no-unused-vars
-      createMessageHistory: (el: MessageHistory) => void
-    }
-  >,
   douyu: {
     ywwuyiLiveOnline: false,
     ywwuyiLiveCategory: null as null | string,
@@ -25,22 +12,6 @@ const store = {
       lastOnline: Date | null
     }
   >,
-}
-
-export const storeMethods = {
-  createChatHistoryIfNX: (chatId: number) => {
-    if (!isUndefined(store.chatHistory[chatId])) return
-    const history: MessageHistory[] = []
-    store.chatHistory[chatId] = {
-      nonRepeatCounter: Infinity,
-      messageHistory: history,
-      createMessageHistory: (p) => {
-        history.unshift(p)
-        // splice from 30 to the end of array.
-        history.splice(30)
-      },
-    }
-  },
 }
 
 export default store
