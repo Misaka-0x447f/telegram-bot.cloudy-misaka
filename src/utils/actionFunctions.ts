@@ -3,7 +3,7 @@ import { isFunction, isNull, isObject } from 'lodash-es'
 import telemetry from './telemetry'
 
 const functions = {
-  randItem: (...args: unknown[]) => args[randInt(0, args.length - 1)],
+  randItem: (...args: unknown[]) => args[randInt(0, args.length - 1)]
 }
 /**
  * action function be like: ${title}\n${randItem(爽哥今天吃什么, 昏睡上播)}

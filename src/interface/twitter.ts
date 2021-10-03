@@ -1,18 +1,21 @@
 /* eslint-disable camelcase */
 import got, { CancelableRequest } from 'got'
-import persistConfig from "../utils/configFile";
-import { HttpsProxyAgent } from "hpagent";
+import persistConfig from '../utils/configFile'
+import { HttpsProxyAgent } from 'hpagent'
+import { Queue } from '../utils/queue'
 
 type TwitterErrors = Array<{ title: string; detail: string; type: string }>
 
+const queue = new Queue('twitter api')
+
 const authHeader = () => ({
-  Authorization: `Bearer ${persistConfig.entries.master.tokenTwitter}`,
+  Authorization: `Bearer ${persistConfig.entries.tokenTwitter}`
 })
 
 export const getUserByUsername = (username: string) =>
-  got
+  queue.push(() => got
     .get(`https://api.twitter.com/2/users/by/username/${username}`, {
-      headers: authHeader(),
+      headers: authHeader()
     })
     .json() as CancelableRequest<{
     data?: {
@@ -21,29 +24,31 @@ export const getUserByUsername = (username: string) =>
       username: string
     }
     errors?: TwitterErrors
-  }>
+  }>)
 
 export const getTweetTimelineById = (
   userId: string,
   {
     excludeReplies = false,
-    excludeRetweets = false,
+    excludeRetweets = false
   } = {}
-) => {
+) => queue.push(() => {
   const exclude = []
   if (excludeReplies) exclude.push('replies')
   if (excludeRetweets) exclude.push('retweets')
   return got
     .get(`https://api.twitter.com/2/users/${userId}/tweets`, {
       searchParams: {
-        exclude: exclude.join(','),
+        exclude: exclude.join(',')
       },
       headers: authHeader(),
-      agent: process.env.HTTP_PROXY ? {
-        https: new HttpsProxyAgent({
-          proxy: process.env.HTTP_PROXY
-        })
-      } : {},
+      agent: process.env.HTTP_PROXY
+        ? {
+            https: new HttpsProxyAgent({
+              proxy: process.env.HTTP_PROXY
+            })
+          }
+        : {}
     })
     .json() as CancelableRequest<{
     data?: Array<{ id: string; text: string }>
@@ -55,14 +60,14 @@ export const getTweetTimelineById = (
     }
     errors?: TwitterErrors
   }>
-}
+})
 
 export const getTweetById = (tweetId: string) =>
-  got
+  queue.push(() => got
     .get(
       `https://api.twitter.com/2/tweets/${tweetId}?tweet.fields=entities&expansions=author_id&user.fields=public_metrics`,
       {
-        headers: authHeader(),
+        headers: authHeader()
       }
     )
     .json() as CancelableRequest<{
@@ -84,3 +89,4 @@ export const getTweetById = (tweetId: string) =>
       ]
     }
   }>
+  )

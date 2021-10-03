@@ -7,8 +7,8 @@ export const downloadStream = (url: string) =>
     agent: process.env.HTTP_PROXY
       ? {
           https: new HttpsProxyAgent({
-            proxy: process.env.HTTP_PROXY,
-          }),
+            proxy: process.env.HTTP_PROXY
+          })
         }
-      : {},
+      : {}
   })

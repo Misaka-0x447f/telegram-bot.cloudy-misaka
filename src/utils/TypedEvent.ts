@@ -25,6 +25,6 @@ export default <T = void>() => {
     sub,
     unsub,
     dispatch,
-    once,
+    once
   }
 }

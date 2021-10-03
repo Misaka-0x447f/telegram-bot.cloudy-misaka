@@ -3,13 +3,21 @@ import resolve from '@rollup/plugin-node-resolve'
 import babel from '@rollup/plugin-babel'
 import json from '@rollup/plugin-json'
 import url from '@rollup/plugin-url'
-import pkg from './package.json'
+import fsj from 'fs-jetpack'
+
+fsj.remove('dist')
 
 const extensions = ['.js', '.jsx', '.ts', '.tsx']
 
 export default {
   input: './src/index.ts',
 
+  output: [
+    {
+      dir: 'dist',
+      format: 'cjs'
+    }
+  ],
   // Specify here external modules which you don't want to include in your bundle (for instance: 'lodash', 'moment' etc.)
   // https://rollupjs.org/guide/en/#external
   external: [],
@@ -22,7 +30,7 @@ export default {
 
     url({
       include: ['**/*.binary'],
-      limit: 0,
+      limit: 0
     }),
 
     // Allow bundling cjs modules. Rollup doesn't understand cjs
@@ -32,15 +40,7 @@ export default {
     babel({
       extensions,
       babelHelpers: 'bundled',
-      include: ['src/**/*'],
-    }),
-  ],
-
-  output: [
-    {
-      file: pkg.main,
-      format: 'cjs',
-      inlineDynamicImports: true,
-    },
-  ],
+      include: ['src/**/*']
+    })
+  ]
 }

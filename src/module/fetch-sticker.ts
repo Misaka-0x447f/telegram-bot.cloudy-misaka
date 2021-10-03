@@ -1,7 +1,7 @@
 import { BotType, getTelegramBotByAnyBotName } from '../interface/telegram'
 import errorMessages from '../utils/errorMessages'
-import configFile from '../utils/configFile'
-import { downloadStream } from "../utils/file";
+import persistConfig from '../utils/configFile'
+import { downloadStream } from '../utils/file'
 const paramDefinition = { replyMessageType: '贴纸。' }
 
 const createWorker = (worker: BotType) =>
@@ -22,10 +22,10 @@ const createWorker = (worker: BotType) =>
     worker.instance.telegram.sendChatAction(currentChatId, 'upload_photo').then()
     const fileLink = await worker.instance.telegram.getFileLink(fileId)
     const stream = await downloadStream(fileLink)
-    await worker.instance.telegram.sendPhoto(currentChatId, {source: stream})
+    await worker.instance.telegram.sendPhoto(currentChatId, { source: stream })
   })
 
-const config = configFile.entries.master.fetchSticker
+const config = persistConfig.entries.fetchSticker
 
 Object.keys(config).forEach((botName) =>
   createWorker(getTelegramBotByAnyBotName(botName))

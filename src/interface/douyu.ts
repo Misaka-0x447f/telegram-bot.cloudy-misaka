@@ -31,8 +31,8 @@ export const fetchRoomStatus = async (room: '6655') => {
         lastOfflineTime: new Date(parseInt(res.room.end_time.concat('000'))),
         liveName: res.room.room_name,
         isOnline: res.room.show_status === 1,
-        category: res.room.second_lvl_name,
-      },
+        category: res.room.second_lvl_name
+      }
     }
   } catch (e) {
     telemetry('Error while fetching room info.', e)

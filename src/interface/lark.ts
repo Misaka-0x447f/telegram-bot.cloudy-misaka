@@ -1,10 +1,10 @@
 /* eslint-disable camelcase */
 import got from 'got'
 import telemetry from '../utils/telemetry'
-import persistConfig from "../utils/configFile";
+import persistConfig from '../utils/configFile'
 
-const appId = persistConfig.entries.master.tokenLark.id
-const appSecret = persistConfig.entries.master.tokenLark.token
+const appId = persistConfig.entries.tokenLark.id
+const appSecret = persistConfig.entries.tokenLark.token
 
 const fetchBearerToken = async () => {
   const res = (await got
@@ -13,8 +13,8 @@ const fetchBearerToken = async () => {
       {
         json: {
           app_id: appId,
-          app_secret: appSecret,
-        },
+          app_secret: appSecret
+        }
       }
     )
     .json()) as {
@@ -25,29 +25,29 @@ const fetchBearerToken = async () => {
   }
   const match = res.tenant_access_token
   if (match) return match
-  telemetry(`Failed to fetch bearer token. Got result`, res)
+  telemetry('Failed to fetch bearer token. Got result', res)
   return null
 }
 
 export const sendMessage = async (message: string, chatId: string) => {
   if (!appSecret) {
-      console.warn('lark bot has been disabled.')
-      return
+    console.warn('lark bot has been disabled.')
+    return
   }
   const token = await fetchBearerToken()
   if (!token) return
   return got
     .post('https://open.feishu.cn/open-apis/message/v4/send/', {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token}`
       },
       json: {
         chat_id: chatId,
         msg_type: 'text',
         content: {
-          text: message,
-        },
-      },
+          text: message
+        }
+      }
     })
     .json()
     .catch((el) =>

@@ -4,10 +4,10 @@ import qs from 'qs'
 
 import crypto from 'crypto'
 import * as url from 'url'
-import persistConfig from "../../utils/configFile";
+import persistConfig from '../../utils/configFile'
 
 const checksum = crypto.createHash('sha1')
-checksum.update(persistConfig.entries.master.tokenTelegram.find(el => el.name === 'strawberry960')?.token!)
+checksum.update(persistConfig.entries.tokenTelegram.find(el => el.name === 'strawberry960')?.token!)
 const token = checksum.digest('hex')
 
 const sendResponse = async (
@@ -18,7 +18,7 @@ const sendResponse = async (
     replyMarkup,
     disableWebPagePreview,
     photo,
-    disableNotification,
+    disableNotification
   }: any
 ) => {
   parseMode = parseMode || ''
@@ -29,7 +29,7 @@ const sendResponse = async (
     parse_mode: parseMode,
     reply_markup: replyMarkup,
     disable_web_page_preview: disableWebPagePreview,
-    disable_notification: disableNotification,
+    disable_notification: disableNotification
   }
   if (photo) {
     newText = photo
@@ -70,8 +70,8 @@ const server = http.createServer((req, res) => {
           sendResponse(1244020370, qs.parse(body)).then()
           done({ text: 'success.' })
         })
-      },
-    },
+      }
+    }
   ]
   console.log(req)
   for (const route of routes) {
@@ -79,7 +79,7 @@ const server = http.createServer((req, res) => {
     const targetUrl = new url.URL(req.url!, 'http://test')
     route.command({
       query: targetUrl.searchParams,
-      param: route.path.exec(targetUrl.pathname)!.groups!,
+      param: route.path.exec(targetUrl.pathname)!.groups!
     })
     return
   }

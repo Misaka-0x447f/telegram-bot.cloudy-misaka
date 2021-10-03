@@ -1,5 +1,5 @@
-import configFile from '../utils/configFile'
-import { getTelegramBotByAnyBotName } from "../interface/telegram";
+import persistConfig from '../utils/configFile'
+import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import errorMessages, { ParamsDefinition } from '../utils/errorMessages'
 import { isNumeric, stringify, tryCatchReturn } from '../utils/lang'
 import { Chat } from 'telegraf/typings/telegram-types'
@@ -8,10 +8,10 @@ import formatYaml from 'prettyjson'
 import yaml from 'js-yaml'
 import { isUndefined, omitBy } from 'lodash-es'
 
-const configs = configFile.entries.master.say
+const configs = persistConfig.entries.say
 const replyTargetStore = {
   chatId: null as number | null,
-  messageId: null as number | null,
+  messageId: null as number | null
 }
 
 const chatInfoString = (chat: Chat, message: Message, shortcut?: string) =>
@@ -22,7 +22,7 @@ const chatInfoString = (chat: Chat, message: Message, shortcut?: string) =>
         chatId: chat.id,
         messageId: message.message_id,
         userName: chat.username,
-        shortcut,
+        shortcut
       },
       isUndefined
     ),
@@ -36,8 +36,7 @@ for (const [botName, config] of Object.entries(configs)) {
     if (
       !config.adminChatIdsCanReceiveReply ||
       (config.adminChatIds?.includes(currentChat.id) && isPrivate)
-    )
-      return
+    ) { return }
     if (
       (message.reply_to_message &&
         message.reply_to_message?.from?.username === bot.username) ||
@@ -58,7 +57,7 @@ for (const [botName, config] of Object.entries(configs)) {
   bot.command.sub(async ({ ctx, commandName, sendMessageToCurrentChat }) => {
     const paramDefinition = {
       replyMessageType:
-        '以 yaml 格式储存的，包含 chatId 和 messageId 键的消息。这些信息被使用一次后将会从内存中清除。',
+        '以 yaml 格式储存的，包含 chatId 和 messageId 键的消息。这些信息被使用一次后将会从内存中清除。'
     }
     if (commandName !== 'sayTarget') return
     const replyTarget = ctx.message?.reply_to_message
@@ -92,10 +91,10 @@ for (const [botName, config] of Object.entries(configs)) {
             .join(
               ', '
             )}；如果不指定此参数，则必须先通过 /sayTarget 指令指定发送目标。`,
-          optional: true,
-        },
+          optional: true
+        }
       ],
-      replyMessageType: '发送内容。',
+      replyMessageType: '发送内容。'
     }
     if (commandName !== 'say' || !currentChatId) return
     if (config.adminChatIds && !config.adminChatIds.includes(currentChatId)) {
@@ -125,7 +124,7 @@ for (const [botName, config] of Object.entries(configs)) {
         ctx.message?.reply_to_message,
         replyTargetStore.messageId
           ? {
-              reply_to_message_id: replyTargetStore.messageId,
+              reply_to_message_id: replyTargetStore.messageId
             }
           : {}
       )

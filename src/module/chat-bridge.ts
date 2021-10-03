@@ -1,8 +1,8 @@
 import promiseRetry from 'promise-retry'
-import { getTelegramBotByAnyBotName } from "../interface/telegram";
-import configFile from "../utils/configFile";
+import { getTelegramBotByAnyBotName } from '../interface/telegram'
+import persistConfig from '../utils/configFile'
 
-for (const [botName, config] of Object.entries(configFile.entries.master.chatBridge)) {
+for (const [botName, config] of Object.entries(persistConfig.entries.chatBridge)) {
   getTelegramBotByAnyBotName(botName).message.sub(async ({ ctx, message }) => {
     for (const entity of config.list) {
       if (message?.chat.id === entity.from && message.from) {

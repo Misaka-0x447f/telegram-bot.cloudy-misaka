@@ -2,8 +2,8 @@ import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import persistConfig from './utils/configFile'
 
-persistConfig.init()
-;(async () => {
+persistConfig.init().then(async () => {
+  import('./utils/telemetry')
   const bot = await import('./interface/telegram')
   import('./module/bili-live')
   import('./module/chat-bridge')
@@ -24,4 +24,4 @@ persistConfig.init()
   }
   process.once('SIGINT', gracefulStopHandler)
   process.once('SIGTERM', gracefulStopHandler)
-})()
+})

@@ -3,12 +3,12 @@ import telemetry from '../utils/telemetry'
 import { HTTPError } from 'got'
 import { isNull, last } from 'lodash-es'
 import { TelegramBotName } from '../utils/type'
-import configFile from '../utils/configFile'
+import persistConfig from '../utils/configFile'
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import { argsTypeValidation, isNumeric } from '../utils/lang'
 import errorMessages, { ParamsDefinition } from '../utils/errorMessages'
 
-const configs = configFile.entries.master.twitterForwarding
+const configs = persistConfig.entries.twitterForwarding
 
 const store: Partial<
   Record<
@@ -30,9 +30,9 @@ for (const [botName, config] of Object.entries(configs)) {
       argumentList: [
         {
           name: 'historyCount',
-          acceptable: '从前几条开始推送。0 表示不使用历史 tweet。',
-        },
-      ],
+          acceptable: '从前几条开始推送。0 表示不使用历史 tweet。'
+        }
+      ]
     }
     const chatId = ctx.chat?.id!
     if (commandName !== historyTweetCountCommand) return
@@ -66,11 +66,11 @@ for (const [botName, config] of Object.entries(configs)) {
     const currentBotConfig = store[botName as TelegramBotName]!
     const historyCount = parseInt(args[0])
     if (historyCount > 5) {
-      bot.sendMessage(chatId, `History count cannot greater that 5.`).then()
+      bot.sendMessage(chatId, 'History count cannot greater that 5.').then()
       return
     }
     if (currentBotConfig.recentTweetIds.length === 0) {
-      bot.sendMessage(chatId, `History not available at this time.`).then()
+      bot.sendMessage(chatId, 'History not available at this time.').then()
       return
     }
     if (historyCount > currentBotConfig.recentTweetIds.length) {
@@ -98,7 +98,7 @@ const worker = async (botName: string) => {
   const bot = getTelegramBotByAnyBotName(botName)
   const config = configs[botName as TelegramBotName]
   const recentTweets = await getTweetTimelineById(config.watch, {
-    ...config.options,
+    ...config.options
   }).catch((err: HTTPError) => {
     console.error(err)
     telemetry(err.message, err.response, err)
@@ -108,7 +108,7 @@ const worker = async (botName: string) => {
     store[botName as TelegramBotName] = {
       startFrom: null,
       configTipSent: false,
-      recentTweetIds: [],
+      recentTweetIds: []
     }
   }
   const currentStore = store[botName as TelegramBotName]!
@@ -124,7 +124,7 @@ const worker = async (botName: string) => {
         id,
         `${config.watch} 的 tweet 已经完成 bot 重新启动后的第一次成功获取，需要指定追溯多少条历史 tweet。\n` +
           `可以使用指令 /${historyTweetCountCommand} 来完成该配置，详情请运行该命令查看帮助。\n` +
-          `下面是最近的 tweet 列表（倒序排列）：\n` +
+          '下面是最近的 tweet 列表（倒序排列）：\n' +
           recentTweets
             .data!.map((el, key) => `${key + 1}: ${el.text}`)
             .join('\n')
@@ -149,13 +149,13 @@ const worker = async (botName: string) => {
         config.actions,
         {
           defaultChatId: 0,
-          filterMethod: (text, filterText) => !!text.match(filterText),
+          filterMethod: (text, filterText) => !!text.match(filterText)
         },
         {
           ...tweet,
           sourceUrlIfNoUrlInTweetContent,
           sourceUrlWithLineBreakIfNoUrlInTweetContent:
-            '\n' + sourceUrlIfNoUrlInTweetContent,
+            '\n' + sourceUrlIfNoUrlInTweetContent
         }
       )
       .then()

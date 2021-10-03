@@ -1,8 +1,8 @@
 node_modules
 dist
-ecosystem.config.js
 .eslintcache
-local-configs
+scripts/docker/ecosystem.config.js
+master.json5
 
 # Created by https://www.toptal.com/developers/gitignore/api/webstorm
 # Edit at https://www.toptal.com/developers/gitignore?templates=webstorm

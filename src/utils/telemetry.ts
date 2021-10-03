@@ -1,8 +1,16 @@
 import { isString } from 'lodash-es'
 import { stringify } from './lang'
 import promiseRetry from 'promise-retry'
-import bot from '../interface/telegram'
-import configFile from "./configFile";
+import { ApplicationInsights } from '@microsoft/applicationinsights-web'
+import persistConfig from './configFile'
+
+export const insights = new ApplicationInsights({
+  config: {
+    instrumentationKey: persistConfig.entries.insight.azureSecret
+  }
+})
+insights.loadAppInsights()
+insights.trackPageView()
 
 export default async (...log: any[]) => {
   let res = ''
@@ -14,10 +22,9 @@ export default async (...log: any[]) => {
     }
   })
   return Promise.all(
-    configFile.entries.master.insight.telegramSupervisor.map((target) =>
-      promiseRetry(
-        (retry) =>
-          bot.misaka.instance.telegram.sendMessage(target, res).catch(retry),
+    persistConfig.entries.insight.telegramSupervisor.map((target) =>
+      promiseRetry(async (retry) =>
+        (await import('../interface/telegram')).exportBot.misaka.instance.telegram.sendMessage(target, res).catch(retry)
       ).then()
     )
   )

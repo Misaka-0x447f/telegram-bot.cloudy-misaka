@@ -3,9 +3,9 @@ import { fetchRoomInfo, getLiveIDByShortId } from '../interface/bilibili'
 import store from '../store/runtime'
 import { formatMinute, isNumeric } from '../utils/lang'
 import { TelegramBotName } from '../utils/type'
-import configFile from '../utils/configFile'
+import persistConfig from '../utils/configFile'
 
-const configs = configFile.entries.master.biliLive
+const configs = persistConfig.entries.biliLive
 
 const worker = async (
   bot: BotType,
@@ -25,7 +25,7 @@ const worker = async (
       wasOnline: false,
       lastCategory: res.area_name,
       lastTitle: res.title,
-      lastOnline: null,
+      lastOnline: null
     }
   }
 
@@ -36,7 +36,7 @@ const worker = async (
     lastOnline: store.bili[id].lastOnline?.toString(),
     liveMinutesUntilNow: formatMinute(
       (new Date().getTime() - store.bili[id].lastOnline?.getTime?.()!) / 60000
-    ),
+    )
   }
 
   const events = {
@@ -44,7 +44,7 @@ const worker = async (
     offline: !isOnline && store.bili[id]?.wasOnline,
     categoryChange: res.area_name !== store.bili[id].lastCategory &&
       store.bili[id].lastCategory,
-    titleChange: res.title !== store.bili[id].lastTitle,
+    titleChange: res.title !== store.bili[id].lastTitle
   }
 
   if (config.onlineActions && events.online) {

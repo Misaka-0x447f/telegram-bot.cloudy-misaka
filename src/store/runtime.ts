@@ -1,7 +1,7 @@
 const store = {
   douyu: {
     ywwuyiLiveOnline: false,
-    ywwuyiLiveCategory: null as null | string,
+    ywwuyiLiveCategory: null as null | string
   },
   bili: {} as Record<
     string,
@@ -11,7 +11,7 @@ const store = {
       lastTitle: null | string
       lastOnline: Date | null
     }
-  >,
+  >
 }
 
 export default store

@@ -2,7 +2,7 @@ import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import { getVideoDetail } from '../interface/bilibili'
 import { ExtractPromise } from '../utils/type'
 import errorMessages from '../utils/errorMessages'
-import configFile from '../utils/configFile'
+import persistConfig from '../utils/configFile'
 
 const biliVideoDetailAdapter = (
   src: ExtractPromise<ReturnType<typeof getVideoDetail>>
@@ -12,7 +12,7 @@ const biliVideoDetailAdapter = (
       (
         {
           '-400': '输入的视频编号错误，或者该视频不存在。',
-          '-404': '稿件可能已被删除。',
+          '-404': '稿件可能已被删除。'
         } as any
       )[src.code] || ('' as string)
     return `${src.code}: ${src.message}。`.concat(extra)
@@ -25,15 +25,15 @@ const biliVideoDetailAdapter = (
     名称: d.title,
     描述: d.desc,
     封面链接: d.pic,
-    发布者: d.owner.name,
+    发布者: d.owner.name
   })
     .map(([key, value]) => `${key}: ${value}`)
     .join('\n')
 }
 
-const paramDefinition = {replyMessageType: 'av 号或 bv 号。例如：av39092411'}
+const paramDefinition = { replyMessageType: 'av 号或 bv 号。例如：av39092411' }
 
-const botNames = Object.keys(configFile.entries.master.fetchVideo)
+const botNames = Object.keys(persistConfig.entries.fetchVideo)
 
 botNames.forEach((el) =>
   getTelegramBotByAnyBotName(el).command.sub(async ({ ctx, commandName, sendMessageToCurrentChat }) => {

@@ -10,13 +10,13 @@ import telemetry from '../utils/telemetry'
 import { TelegramBotName, TupleOmitFirst } from '../utils/type'
 import HttpsProxyAgent from 'https-proxy-agent'
 import { runActionFunctions } from '../utils/actionFunctions'
+import telegrafThrottler from 'telegraf-throttler'
 
 const botList: Array<{ name: TelegramBotName; token: string }> = persistConfig
-  .entries.master.tokenTelegram as any
+  .entries.tokenTelegram as any
 
-const agent = process.env.HTTP_PROXY
-  ? // @ts-ignore
-    new HttpsProxyAgent(process.env.HTTP_PROXY)
+const agent = process.env.HTTP_PROXY // @ts-ignore
+  ? new HttpsProxyAgent(process.env.HTTP_PROXY)
   : undefined
 
 if (process.env.HTTP_PROXY) {
@@ -27,17 +27,19 @@ const bots = botList.map((el) => ({
   ...el,
   instance: new Telegraf(el.token, {
     telegram: {
-      agent,
-    },
-  }),
+      agent
+    }
+  })
 }))
 
 const botUsernameTable: Partial<Record<TelegramBotName, string>> = {}
+const throttler = telegrafThrottler()
 
 // username enables receiving group message. https://github.com/telegraf/telegraf/issues/134
 // note: you will need to kick bot then invite it again to receive group message.
 // https://github.com/yagop/node-telegram-bot-api/issues/174
 bots.forEach((bot) => {
+  bot.instance.use(throttler)
   bot.instance.telegram.getMe().then((botInfo) => {
     console.log(`Connected to ${botInfo.username}`)
     bot.instance.options.username = botInfo.username
@@ -68,7 +70,7 @@ const eventBusFactory = () => ({
       commandName: string
       args: string[]
     } & CommonProperties
-  >(),
+  >()
 })
 
 const botFactory = (el: typeof bots[0]) => {
@@ -77,7 +79,7 @@ const botFactory = (el: typeof bots[0]) => {
   function retryableMethodFactory<T extends (..._: any[]) => any>(method: T) {
     // @ts-ignore
     return (...params: Parameters<T>) =>
-      promiseRetry((retry) => method(...params).catch(retry), {retries: 3, factor: 5}) as ReturnType<T>
+      promiseRetry((retry) => method(...params).catch(retry), { retries: 3, factor: 5 }) as ReturnType<T>
   }
 
   // fxxk 'this'.
@@ -104,7 +106,7 @@ const botFactory = (el: typeof bots[0]) => {
         ...params: TupleOmitFirst<Parameters<Telegram['sendMessage']>>
       ) => sendMessage(message.chat.id, ...params),
       currentChat,
-      currentChatId: message.chat.id,
+      currentChatId: message.chat.id
     }
 
     if (commandMatchArray) {
@@ -114,12 +116,12 @@ const botFactory = (el: typeof bots[0]) => {
         args: message
           .text!.match(/\/\w+(?:\s?@\w+)? ?(.*)/)![1]
           .trim()
-          .split(' '),
+          .split(' ')
       })
     }
     eventBus.message.dispatch({
       ...commonProperties,
-      isCommand: !!commandMatchArray,
+      isCommand: !!commandMatchArray
     })
   })
 
@@ -127,7 +129,7 @@ const botFactory = (el: typeof bots[0]) => {
     ...eventBus,
     instance: el.instance,
     alias: el.name,
-    get username() {
+    get username () {
       return botUsernameTable[el.name]!
     },
     sendMessage,
@@ -148,13 +150,13 @@ const botFactory = (el: typeof bots[0]) => {
         // group of action.
         for (const step of action) {
           const chatId = step.dest || options.defaultChatId
-          if (!chatId)
+          if (!chatId) {
             await telemetry(
               `AssertionError: ChatId was not defined with step ${JSON.stringify(
                 step
               )}`
             )
-          else if (step.type === 'message') {
+          } else if (step.type === 'message') {
             const text = runActionFunctions(step.text).replaceAll(
               /\${(.*?)}/g,
               (_, name) => params[name]?.toString() || `<${name}=nil>`
@@ -163,17 +165,16 @@ const botFactory = (el: typeof bots[0]) => {
               options.filterMethod &&
               step.filter &&
               !options.filterMethod(text, step.filter)
-            )
-              return
+            ) { return }
             await sendMessage(chatId, text, step?.extra)
           } else if (step.type === 'sleep') await sleep(step.time)
-          else if (step.type === 'messageByForward')
+          else if (step.type === 'messageByForward') {
             await promiseRetry((retry) =>
               el.instance.telegram
                 .forwardMessage(chatId, step.source, step.messageId)
                 .catch(retry)
             )
-          else {
+          } else {
             const errorMsg = `AssertionError: type ${
               // @ts-ignore
               step.type
@@ -184,7 +185,7 @@ const botFactory = (el: typeof bots[0]) => {
       })
       // await all actions done
       return Promise.all(promises.map((el) => el())).then()
-    },
+    }
   }
 }
 
