@@ -30,4 +30,4 @@ persistConfig.init().then(async () => {
 http.createServer((_, res) => {
   res.write('I\'m alive!')
   res.end()
-}).listen(80)
+}).listen(8080)
