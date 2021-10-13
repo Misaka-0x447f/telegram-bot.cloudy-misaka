@@ -2,15 +2,8 @@
 <project version="4">
   <component name="WebServers">
     <option name="servers">
-      <webServer id="48d98e6b-4268-4afd-ac3b-0db040186183" name="host">
-        <fileTransfer rootFolder="/var/node-app/misaka-telegram-bot" accessType="SFTP" host="78.142.194.8" port="17535" sshConfigId="9c1cd470-527f-41b0-907b-a1159cee0ab7" sshConfig="root@78.142.194.8:17535 password">
-          <advancedOptions>
-            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
-          </advancedOptions>
-        </fileTransfer>
-      </webServer>
-      <webServer id="33baa920-6aa0-4821-b1c3-5a9d0a1f9dc9" name="config-server-misaka-telegram-bot" url="http://waws-prod-hk1-037.ftp.azurewebsites.windows.net">
-        <fileTransfer rootFolder="/site/wwwroot" accessType="FTPS" host="waws-prod-hk1-037.ftp.azurewebsites.windows.net" port="21">
+      <webServer id="9d45f8b0-01cb-43d0-98bf-1225652e8f12" name="synology">
+        <fileTransfer rootFolder="/home" accessType="SFTP" host="10.0.0.47" port="2200" sshConfigId="804a7257-36fb-4796-9288-e243d77b053e" sshConfig="AozakiOrenji@10.0.0.47:2200 password">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>

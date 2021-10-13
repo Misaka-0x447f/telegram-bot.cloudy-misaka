@@ -1,7 +1,6 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import persistConfig from './utils/configFile'
-import http from 'http'
 
 persistConfig.init().then(async () => {
   import('./utils/telemetry')
@@ -26,8 +25,3 @@ persistConfig.init().then(async () => {
   process.once('SIGINT', gracefulStopHandler)
   process.once('SIGTERM', gracefulStopHandler)
 })
-
-http.createServer((_, res) => {
-  res.write('I\'m alive!')
-  res.end()
-}).listen(8080)
