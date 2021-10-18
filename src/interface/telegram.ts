@@ -9,6 +9,8 @@ import { sleep } from '../utils/lang'
 import telemetry from '../utils/telemetry'
 import { TelegramBotName, TupleOmitFirst } from '../utils/type'
 import HttpsProxyAgent from 'https-proxy-agent'
+import { SocksProxyAgent } from 'socks-proxy-agent'
+
 import { runActionFunctions } from '../utils/actionFunctions'
 import telegrafThrottler from 'telegraf-throttler'
 
@@ -17,11 +19,7 @@ const botList: Array<{ name: TelegramBotName; token: string }> = persistConfig
 
 const agent = process.env.HTTP_PROXY // @ts-ignore
   ? new HttpsProxyAgent(process.env.HTTP_PROXY)
-  : undefined
-
-if (process.env.HTTP_PROXY) {
-  console.log(`connecting to telegram via proxy ${process.env.HTTP_PROXY}`)
-}
+  : process.env.SOCKS_PROXY ? new SocksProxyAgent(process.env.SOCKS_PROXY) : undefined
 
 const bots = botList.map((el) => ({
   ...el,

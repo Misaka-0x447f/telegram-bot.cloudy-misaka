@@ -3,6 +3,7 @@ import got, { CancelableRequest } from 'got'
 import persistConfig from '../utils/configFile'
 import { HttpsProxyAgent } from 'hpagent'
 import { Queue } from '../utils/queue'
+import { SocksProxyAgent } from 'socks-proxy-agent'
 
 type TwitterErrors = Array<{ title: string; detail: string; type: string }>
 
@@ -42,13 +43,9 @@ export const getTweetTimelineById = (
         exclude: exclude.join(',')
       },
       headers: authHeader(),
-      agent: process.env.HTTP_PROXY
-        ? {
-            https: new HttpsProxyAgent({
-              proxy: process.env.HTTP_PROXY
-            })
-          }
-        : {}
+      agent: process.env.HTTP_PROXY // @ts-ignore
+        ? { https: new HttpsProxyAgent(process.env.HTTP_PROXY) }
+        : process.env.SOCKS_PROXY ? { https: new SocksProxyAgent(process.env.SOCKS_PROXY) } : {}
     })
     .json() as CancelableRequest<{
     data?: Array<{ id: string; text: string }>

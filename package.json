@@ -9,7 +9,6 @@
     "lint": "eslint --fix ./src/**/*.ts",
     "build:js": "rollup -c",
     "build": "npm run lint && npm run build:js",
-    "ship": "npm run build && docker build . --tag misakakumomi/telegram-bot-cloudy-misaka:latest && docker push misakakumomi/telegram-bot-cloudy-misaka:latest",
     "prepare": "husky install"
   },
   "main": "dist/index.js",
@@ -67,6 +66,7 @@
     "promise-retry": "^2.0.1",
     "qs": "^6.10.1",
     "regenerator-runtime": "^0.13.7",
+    "socks-proxy-agent": "^6.1.0",
     "telegraf": "^3.38.0",
     "telegraf-throttler": "^0.3.0"
   },
