@@ -3,6 +3,7 @@ import { stringify } from './lang'
 import promiseRetry from 'promise-retry'
 import { ApplicationInsights } from '@microsoft/applicationinsights-web'
 import persistConfig from './configFile'
+import fsj from 'fs-jetpack'
 
 export const insights = new ApplicationInsights({
   config: {
@@ -11,6 +12,17 @@ export const insights = new ApplicationInsights({
 })
 insights.loadAppInsights()
 insights.trackPageView()
+
+const reportPath = './tmp/telemetry-buffer'
+
+const sendReport = async (text?: string) => {
+  const res = text || 'Error log summary in past 1 hrs: ' + fsj.read(reportPath)
+  await Promise.all(persistConfig.entries.insight.telegramSupervisor.map((target) =>
+    promiseRetry(async (retry) =>
+      (await import('../interface/telegram')).exportBot.misaka.instance.telegram.sendMessage(target, res).catch(retry)
+    ).then()
+  ))
+}
 
 export default async (...log: any[]) => {
   let res = ''
@@ -21,11 +33,14 @@ export default async (...log: any[]) => {
       res = res.concat(stringify(el)).concat('\n')
     }
   })
-  return Promise.all(
-    persistConfig.entries.insight.telegramSupervisor.map((target) =>
-      promiseRetry(async (retry) =>
-        (await import('../interface/telegram')).exportBot.misaka.instance.telegram.sendMessage(target, res).catch(retry)
-      ).then()
-    )
-  )
+  const logFile = fsj.read(reportPath)
+  if (!logFile) {
+    sendReport(res).then()
+    setTimeout(() => {
+      sendReport().then(
+        () => fsj.remove(reportPath))
+    }, 3600000)
+  } else {
+    fsj.append(reportPath, res, {})
+  }
 }

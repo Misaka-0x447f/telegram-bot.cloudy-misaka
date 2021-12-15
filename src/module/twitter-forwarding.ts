@@ -30,7 +30,7 @@ for (const [botName, config] of Object.entries(configs)) {
       argumentList: [
         {
           name: 'historyCount',
-          acceptable: '从前几条开始推送。0 表示不使用历史 tweet。'
+          acceptable: '下次推送从前几条开始推送。0 表示不使用历史 tweet。'
         }
       ]
     }
@@ -59,51 +59,43 @@ for (const [botName, config] of Object.entries(configs)) {
         .then()
       return
     }
-    if (!isNull(store[botName as TelegramBotName]?.startFrom)) {
-      bot.sendMessage(chatId, `${botName} has been configured.`).then()
-      return
-    }
-    const currentBotConfig = store[botName as TelegramBotName]!
+    const currentStore = store[botName as TelegramBotName]!
     const historyCount = parseInt(args[0])
-    if (historyCount > 5) {
-      bot.sendMessage(chatId, 'History count cannot greater that 5.').then()
-      return
-    }
-    if (currentBotConfig.recentTweetIds.length === 0) {
+    if (currentStore.recentTweetIds.length === 0) {
       bot.sendMessage(chatId, 'History not available at this time.').then()
       return
     }
-    if (historyCount > currentBotConfig.recentTweetIds.length) {
+    if (historyCount > currentStore.recentTweetIds.length) {
       bot
         .sendMessage(
           chatId,
           `History count cannot greater than history record count which is ${
-            currentBotConfig!.recentTweetIds.length
+            currentStore!.recentTweetIds.length
           }.`
         )
         .then()
       return
     }
-    const recentTweets = currentBotConfig.recentTweetIds.concat().reverse()
+    const recentTweets = currentStore.recentTweetIds.concat().reverse()
     if (historyCount === 0) {
-      currentBotConfig.startFrom = recentTweets[0] + BigInt(1)
+      currentStore.startFrom = recentTweets[0] + BigInt(1)
     } else {
-      currentBotConfig.startFrom = recentTweets[historyCount - 1]
+      currentStore.startFrom = recentTweets[historyCount - 1]
     }
-    await bot.sendMessage(chatId, '成功。')
+    await bot.sendMessage(chatId, 'Success.')
   })
 }
 
 const worker = async (botName: string) => {
   const bot = getTelegramBotByAnyBotName(botName)
   const config = configs[botName as TelegramBotName]
-  const recentTweets = await getTweetTimelineById(config.watch, {
+  const recentTweetsFromServer = await getTweetTimelineById(config.watch, {
     ...config.options
   }).catch((err: HTTPError) => {
     console.error(err)
     telemetry(err.message, err.response, err)
   })
-  if (!recentTweets?.data) return
+  if (!recentTweetsFromServer?.data) return
   if (!store[botName as TelegramBotName]) {
     store[botName as TelegramBotName] = {
       startFrom: null,
@@ -112,28 +104,17 @@ const worker = async (botName: string) => {
     }
   }
   const currentStore = store[botName as TelegramBotName]!
-  currentStore.recentTweetIds = recentTweets.data
+  currentStore.recentTweetIds = recentTweetsFromServer.data
     .map((el) => BigInt(el.id))
     .concat()
     .reverse()
 
   if (isNull(currentStore.startFrom)) {
-    if (currentStore.configTipSent) return
-    config.allowConfigUser?.forEach((id) =>
-      bot.sendMessage(
-        id,
-        `${config.watch} 的 tweet 已经完成 bot 重新启动后的第一次成功获取，需要指定追溯多少条历史 tweet。\n` +
-          `可以使用指令 /${historyTweetCountCommand} 来完成该配置，详情请运行该命令查看帮助。\n` +
-          '下面是最近的 tweet 列表（倒序排列）：\n' +
-          recentTweets
-            .data!.map((el, key) => `${key + 1}: ${el.text}`)
-            .join('\n')
-      )
-    )
-    currentStore.configTipSent = true
+    const recentTweets = currentStore.recentTweetIds.concat().reverse()
+    currentStore.startFrom = recentTweets[0] + BigInt(1)
     return
   }
-  const tweetsToSend = recentTweets.data
+  const tweetsToSend = recentTweetsFromServer.data
     .filter((el) => BigInt(el.id) >= currentStore.startFrom!)
     .concat()
     .reverse()
