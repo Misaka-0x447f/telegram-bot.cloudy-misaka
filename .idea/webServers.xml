@@ -23,7 +23,7 @@
           </advancedOptions>
         </fileTransfer>
       </webServer>
-      <webServer id="09d9df46-b827-4385-a46b-dfa824f850a6" name="home">
+      <webServer id="09d9df46-b827-4385-a46b-dfa824f850a6" name="daemon">
         <fileTransfer rootFolder="/root" accessType="SFTP" host="10.0.0.150" port="22" sshConfigId="7aa6f595-d51d-4d1a-9626-83d8d909396b" sshConfig="root@10.0.0.150:22 password">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />

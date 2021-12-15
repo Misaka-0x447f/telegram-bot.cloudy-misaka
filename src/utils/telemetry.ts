@@ -5,13 +5,17 @@ import { ApplicationInsights } from '@microsoft/applicationinsights-web'
 import persistConfig from './configFile'
 import fsj from 'fs-jetpack'
 
-export const insights = new ApplicationInsights({
-  config: {
-    instrumentationKey: persistConfig.entries.insight.azureSecret
-  }
-})
-insights.loadAppInsights()
-insights.trackPageView()
+export let insights: ApplicationInsights
+
+export const telemetryInit = () => {
+  insights = new ApplicationInsights({
+    config: {
+      instrumentationKey: persistConfig.entries.insight.azureSecret
+    }
+  })
+  insights.loadAppInsights()
+  insights.trackPageView()
+}
 
 const reportPath = './tmp/telemetry-buffer'
 
@@ -40,7 +44,6 @@ export default async (...log: any[]) => {
       sendReport().then(
         () => fsj.remove(reportPath))
     }, 3600000)
-  } else {
-    fsj.append(reportPath, res, {})
   }
+  fsj.append(reportPath, res, {})
 }
