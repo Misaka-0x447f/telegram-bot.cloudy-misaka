@@ -8,7 +8,7 @@
     "type-check:watch": "npm run type-check -- --watch",
     "lint": "eslint --fix ./src/**/*.ts",
     "build:js": "rollup -c",
-    "build": "npm run lint && npm run build:js",
+    "build": "npm run lint && npm run build:js && docker build -t misakakumomi/telegram-bot .",
     "prepare": "husky install"
   },
   "main": "dist/index.js",
