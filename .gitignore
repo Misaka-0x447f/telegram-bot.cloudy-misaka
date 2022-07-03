@@ -3,8 +3,7 @@ dist
 .eslintcache
 scripts/docker/ecosystem.config.js
 master.json5
-./tmp
-./tmp/**
+tmp
 
 # Created by https://www.toptal.com/developers/gitignore/api/webstorm
 # Edit at https://www.toptal.com/developers/gitignore?templates=webstorm
