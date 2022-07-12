@@ -1,6 +1,6 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
-import persistConfig from './utils/configFile'
+import persistConfig from './utils/persistConfig'
 import { telemetryInit } from './utils/telemetry'
 import promiseRetry from 'promise-retry'
 

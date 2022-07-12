@@ -2,7 +2,7 @@ import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import { getVideoDetail } from '../interface/bilibili'
 import { ExtractPromise } from '../utils/type'
 import errorMessages from '../utils/errorMessages'
-import persistConfig from '../utils/configFile'
+import persistConfig from '../utils/persistConfig'
 
 const biliVideoDetailAdapter = (
   src: ExtractPromise<ReturnType<typeof getVideoDetail>>

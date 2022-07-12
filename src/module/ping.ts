@@ -1,5 +1,5 @@
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
-import persistConfig from '../utils/configFile'
+import persistConfig from '../utils/persistConfig'
 
 const configs = persistConfig.entries.ping
 

@@ -61,6 +61,7 @@
     "json5": "^2.2.0",
     "lodash-es": "^4.17.21",
     "mem": "^8.1.1",
+    "node-html-parser": "^5.3.3",
     "p-queue": "^7.1.0",
     "prettyjson": "^1.2.1",
     "promise-retry": "^2.0.1",

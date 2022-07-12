@@ -2,7 +2,7 @@ import { isString } from 'lodash-es'
 import { stringify } from './lang'
 import promiseRetry from 'promise-retry'
 import { ApplicationInsights } from '@microsoft/applicationinsights-web'
-import persistConfig from './configFile'
+import persistConfig from './persistConfig'
 import fsj from 'fs-jetpack'
 
 export let insights: ApplicationInsights

@@ -44,6 +44,7 @@ const data: {
     }
     tokenTelegram: Array<{ name: TelegramBotName; token: string }>
     tokenTwitter: string
+    tokenDeepl: string
     biliLive: Record<
       TelegramBotName,
       ChatWorkerRule<
@@ -64,6 +65,12 @@ const data: {
     >
     fetchSticker: Record<TelegramBotName, {}>
     fetchVideo: Record<TelegramBotName, {}>
+    galnet: Record<
+      TelegramBotName,
+      ChatWorkerRule & {
+        allowConfigUser?: number[]
+      }
+    >
     getUserInfo: Record<TelegramBotName, {}>
     ping: Record<TelegramBotName, Record<'actions', Actions>>
     repeater: Record<TelegramBotName, {}>
@@ -107,7 +114,7 @@ export default {
       data.value = JSON5.parse(f)
     }
   },
-  get entries() {
+  get entries () {
     return data.value
-  },
+  }
 }

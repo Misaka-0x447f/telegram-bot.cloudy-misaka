@@ -4,7 +4,7 @@ import TypedEvent from '../utils/TypedEvent'
 import * as tt from 'telegraf/typings/telegram-types'
 import promiseRetry from 'promise-retry'
 import { Message } from 'telegram-typings'
-import persistConfig, { Actions, RegexString } from '../utils/configFile'
+import persistConfig, { Actions, RegexString } from '../utils/persistConfig'
 import { sleep } from '../utils/lang'
 import telemetry from '../utils/telemetry'
 import { TelegramBotName, TupleOmitFirst } from '../utils/type'
@@ -13,6 +13,7 @@ import { SocksProxyAgent } from 'socks-proxy-agent'
 
 import { runActionFunctions } from '../utils/actionFunctions'
 import telegrafThrottler from 'telegraf-throttler'
+import { defaultTo } from 'lodash-es'
 
 const botList: Array<{ name: TelegramBotName; token: string }> = persistConfig
   .entries.tokenTelegram as any
@@ -157,13 +158,13 @@ const botFactory = (el: typeof bots[0]) => {
           } else if (step.type === 'message') {
             const text = runActionFunctions(step.text).replaceAll(
               /\${(.*?)}/g,
-              (_, name) => params[name]?.toString() || `<${name}=nil>`
+              (_, name) => defaultTo(params[name]?.toString(), `<${name}=nil>`)
             )
             if (
               options.filterMethod &&
               step.filter &&
               !options.filterMethod(text, step.filter)
-            ) { return }
+            ) return
             await sendMessage(chatId, text, step?.extra)
           } else if (step.type === 'sleep') await sleep(step.time)
           else if (step.type === 'messageByForward') {

@@ -1,4 +1,4 @@
-import persistConfig from '../utils/configFile'
+import persistConfig from '../utils/persistConfig'
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import errorMessages, { ParamsDefinition } from '../utils/errorMessages'
 import { isNumeric, stringify, tryCatchReturn } from '../utils/lang'

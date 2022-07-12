@@ -1,7 +1,7 @@
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import { getUnixTimeStamp, rand, sha1, sleep } from '../utils/lang'
 import { Message } from 'telegram-typings'
-import persistConfig from '../utils/configFile'
+import persistConfig from '../utils/persistConfig'
 import { UnixTimeStamp } from '../utils/type'
 import { isNull, isUndefined } from 'lodash-es'
 

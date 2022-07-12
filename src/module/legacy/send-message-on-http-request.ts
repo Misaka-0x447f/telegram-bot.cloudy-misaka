@@ -4,7 +4,7 @@ import qs from 'qs'
 
 import crypto from 'crypto'
 import * as url from 'url'
-import persistConfig from '../../utils/configFile'
+import persistConfig from '../../utils/persistConfig'
 
 const checksum = crypto.createHash('sha1')
 checksum.update(persistConfig.entries.tokenTelegram.find(el => el.name === 'strawberry960')?.token!)

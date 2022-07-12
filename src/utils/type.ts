@@ -9,3 +9,6 @@ export type TupleOmitFirst<L extends any[]> = ((...x: L) => any) extends
   ((h: any, ...t: infer T) => any) ? T : never;
 
 export type UnixTimeStamp = number
+
+export const asRequired = <T>(p: T) => p as Required<T>
+export const asNonNullable = <T>(p: T) => p as NonNullable<T>

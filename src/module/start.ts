@@ -1,5 +1,5 @@
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
-import persistConfig from '../utils/configFile'
+import persistConfig from '../utils/persistConfig'
 
 for (const [botName, config] of Object.entries(persistConfig.entries.start)) {
   const bot = getTelegramBotByAnyBotName(botName)

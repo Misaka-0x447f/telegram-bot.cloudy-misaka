@@ -3,7 +3,7 @@ import telemetry from '../utils/telemetry'
 import { HTTPError } from 'got'
 import { isNull, last } from 'lodash-es'
 import { TelegramBotName } from '../utils/type'
-import persistConfig from '../utils/configFile'
+import persistConfig from '../utils/persistConfig'
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import { argsTypeValidation, isNumeric } from '../utils/lang'
 import errorMessages, { ParamsDefinition } from '../utils/errorMessages'
@@ -15,7 +15,6 @@ const store: Partial<
     TelegramBotName,
     {
       startFrom: null | bigint
-      configTipSent: boolean
       recentTweetIds: bigint[]
     }
   >
@@ -99,7 +98,6 @@ const worker = async (botName: string) => {
   if (!store[botName as TelegramBotName]) {
     store[botName as TelegramBotName] = {
       startFrom: null,
-      configTipSent: false,
       recentTweetIds: []
     }
   }

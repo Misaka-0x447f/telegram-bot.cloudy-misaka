@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 import got, { CancelableRequest } from 'got'
-import persistConfig from '../utils/configFile'
+import persistConfig from '../utils/persistConfig'
 import { HttpsProxyAgent } from 'hpagent'
 import { Queue } from '../utils/queue'
 import { SocksProxyAgent } from 'socks-proxy-agent'

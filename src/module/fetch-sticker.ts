@@ -1,6 +1,6 @@
 import { BotType, getTelegramBotByAnyBotName } from '../interface/telegram'
 import errorMessages from '../utils/errorMessages'
-import persistConfig from '../utils/configFile'
+import persistConfig from '../utils/persistConfig'
 import { downloadStream } from '../utils/file'
 const paramDefinition = { replyMessageType: '贴纸。' }
 

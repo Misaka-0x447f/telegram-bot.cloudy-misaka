@@ -3,7 +3,7 @@ import { fetchRoomInfo, getLiveIDByShortId } from '../interface/bilibili'
 import store from '../store/runtime'
 import { formatMinute, isNumeric } from '../utils/lang'
 import { TelegramBotName } from '../utils/type'
-import persistConfig from '../utils/configFile'
+import persistConfig from '../utils/persistConfig'
 
 const configs = persistConfig.entries.biliLive
 
