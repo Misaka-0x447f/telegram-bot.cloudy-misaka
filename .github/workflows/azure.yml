@@ -10,8 +10,12 @@ on:
       - '**'
       - '.github/workflows/azure.yml'
 
-  # Allow mannually trigger
+  # Allow manually trigger
   workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   build:
