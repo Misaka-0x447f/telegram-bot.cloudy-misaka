@@ -8,7 +8,7 @@ import telemetry from '../utils/telemetry'
 import { isNull } from 'lodash-es'
 import { translateText } from '../interface/translate'
 import errorMessages, { ParamsDefinition } from '../utils/errorMessages'
-import { argsTypeValidation, isNumeric } from '../utils/lang'
+import { argsTypeValidation, isNumeric, sleep } from '../utils/lang'
 import { telegramHTMLEscape } from '../utils/telegram'
 
 const configs = persistConfig.entries.galnet
@@ -127,6 +127,7 @@ const worker = async (botName: string) => {
   const newsToSend = recentGalnetNewsFromServer
     .filter((el) => el.id! > currentStore.startFrom!)
     .concat()
+    .reverse()
 
   if (!newsToSend.length) return
 
@@ -175,8 +176,9 @@ const worker = async (botName: string) => {
         translateErrorString
       }
     )
+    currentStore.startFrom = news.id!
+    await sleep(30000)
   }
-  currentStore.startFrom = currentStore.recentNewsIds[0]
 }
 
 const main = async (botName: string) => {

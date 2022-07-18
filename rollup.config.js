@@ -4,6 +4,10 @@ import babel from '@rollup/plugin-babel'
 import json from '@rollup/plugin-json'
 import url from '@rollup/plugin-url'
 import fsj from 'fs-jetpack'
+import replace from '@rollup/plugin-replace'
+import gitCommitInfo from 'git-commit-info'
+
+const commit = gitCommitInfo()
 
 fsj.remove('dist')
 
@@ -23,6 +27,10 @@ export default {
   external: [],
 
   plugins: [
+    replace({
+      'process.env.BUILT_STRING': `\`Built from revision ${commit.shortCommit} (${commit.date}) with commitMsg "${commit.message}" at ${new Date().toLocaleString('zh', { timeZone: 'Asia/Shanghai' })}\``
+    }),
+
     // Allows node_modules resolution
     resolve({ extensions, preferBuiltins: true }),
 
