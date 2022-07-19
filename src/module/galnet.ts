@@ -126,7 +126,6 @@ const worker = async (botName: string) => {
 
   const newsToSend = recentGalnetNewsFromServer
     .filter((el) => el.id! > currentStore.startFrom!)
-    .concat()
     .reverse()
 
   if (!newsToSend.length) return
@@ -176,9 +175,9 @@ const worker = async (botName: string) => {
         translateErrorString
       }
     )
-    currentStore.startFrom = news.id!
     await sleep(30000)
   }
+  currentStore.startFrom = currentStore.recentNewsIds[0]
 }
 
 const main = async (botName: string) => {
