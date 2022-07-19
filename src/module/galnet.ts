@@ -5,7 +5,7 @@ import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import { fetchGalnet } from '../interface/galnet'
 import { HTTPError } from 'got'
 import telemetry from '../utils/telemetry'
-import { isNull } from 'lodash-es'
+import { isNull, isString } from 'lodash-es'
 import { translateText } from '../interface/translate'
 import errorMessages, { ParamsDefinition } from '../utils/errorMessages'
 import { argsTypeValidation, isNumeric, sleep } from '../utils/lang'
@@ -17,8 +17,8 @@ const store: Partial<
   Record<
     TelegramBotName,
     {
-      startFrom: null | string
-      recentNewsIds: string[]
+      startFrom: null | number
+      recentNewsIds: number[]
     }
   >
 > = {}
@@ -32,7 +32,7 @@ for (const [botName, config] of Object.entries(configs)) {
       argumentList: [
         {
           name: 'historyCount',
-          acceptable: '下次推送从前几条开始推送。0 表示不使用历史 tweet。'
+          acceptable: '下次推送从前几条开始推送。0 表示不使用历史新闻。'
         }
       ]
     }
@@ -115,7 +115,7 @@ const worker = async (botName: string) => {
   }
   const currentStore = store[botName as TelegramBotName]!
   currentStore.recentNewsIds = recentGalnetNewsFromServer
-    .map((el) => asNonNullable(el.id))
+    .map((el) => asNonNullable(el.timestamp))
     .concat()
 
   if (isNull(currentStore.startFrom)) {
@@ -125,9 +125,7 @@ const worker = async (botName: string) => {
   }
 
   const newsToSend = recentGalnetNewsFromServer
-    .filter((el) => el.id! > currentStore.startFrom!)
-    // .reverse() is in-place operation
-    .concat()
+    .filter((el) => el.timestamp! > currentStore.startFrom!)
     .reverse()
 
   if (!newsToSend.length) return
@@ -164,8 +162,10 @@ const worker = async (botName: string) => {
     }
     const params = news
     for (const [i, v] of Object.entries(params)) {
-      // @ts-expect-error key type problem
-      params[i] = telegramHTMLEscape(v!)
+      if (isString(v)) {
+        // @ts-expect-error key type problem
+        params[i] = telegramHTMLEscape(v!)
+      }
     }
     await bot.runActions(
       config.actions,
@@ -177,9 +177,9 @@ const worker = async (botName: string) => {
         translateErrorString
       }
     )
-    await sleep(30000)
+    await sleep(15000)
+    currentStore.startFrom = news.timestamp
   }
-  currentStore.startFrom = currentStore.recentNewsIds[0]
 }
 
 const main = async (botName: string) => {
