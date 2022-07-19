@@ -126,6 +126,8 @@ const worker = async (botName: string) => {
 
   const newsToSend = recentGalnetNewsFromServer
     .filter((el) => el.id! > currentStore.startFrom!)
+    // .reverse() is in-place operation
+    .concat()
     .reverse()
 
   if (!newsToSend.length) return
