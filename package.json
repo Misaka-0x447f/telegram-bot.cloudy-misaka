@@ -2,6 +2,7 @@
   "name": "misaka-telegram-bot",
   "version": "1.0.0",
   "description": "",
+  "//": "这个项目有配 ci，请通过 ci 部署",
   "scripts": {
     "start": "rollup -c && node ./dist/index.js --enable-source-maps",
     "type-check": "tsc --noEmit",

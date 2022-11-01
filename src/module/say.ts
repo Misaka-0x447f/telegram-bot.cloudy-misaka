@@ -22,6 +22,7 @@ const chatInfoString = (chat: Chat, message: Message, shortcut?: string) =>
         chatId: chat.id,
         messageId: message.message_id,
         userName: chat.username,
+        link: chat.id.toString().startsWith('-100') && `https://t.me/c/${chat.id.toString().substring(4)}/${message.message_id}`,
         shortcut
       },
       isUndefined
