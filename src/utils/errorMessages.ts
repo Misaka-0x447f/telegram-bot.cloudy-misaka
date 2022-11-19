@@ -25,7 +25,8 @@ export default {
   illegalArgumentCount: (expected: string | number, actual: string | number, params: ParamsDefinition) =>
     `不合法的参数。需要 ${expected} 个参数，实际存在 ${actual} 个参数。\n${getHelpMessage(params)}`,
   illegalReplyMessageCount: (params: ParamsDefinition) =>
-    '不合法的回复消息。该命令需要 1 条回复消息，实际没有回复任何消息。' +
+    '不合法的回复消息。该命令需要回复 1 条消息，实际没有回复任何消息。' +
+    '\n先在聊天中发送作为参数的消息，再选择回复你发送的消息并发送机器人指令。' +
     `\n${getHelpMessage(params)}`,
   illegalArguments: (params: ParamsDefinition) => `不合法的参数。\n${getHelpMessage(params)}`,
   illegalReplyMessage: (params: ParamsDefinition) => `不合法的回复消息。\n${getHelpMessage(params)}`

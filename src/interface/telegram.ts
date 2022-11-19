@@ -62,6 +62,7 @@ const eventBusFactory = () => ({
   message: TypedEvent<
     {
       isCommand: boolean
+      replyToCommand?: string
     } & CommonProperties
   >(),
   command: TypedEvent<
@@ -71,6 +72,9 @@ const eventBusFactory = () => ({
     } & CommonProperties
   >()
 })
+
+// @ts-expect-error expected behavior: type of T
+export type TelegrafEventBusListenerType<T extends keyof ReturnType<typeof eventBusFactory> | null = null> = T extends null ? (p: CommonProperties) => unknown : (...p: Parameters<ReturnType<typeof eventBusFactory>[T]['dispatch']>) => unknown
 
 const botFactory = (el: typeof bots[0]) => {
   const eventBus = eventBusFactory()
@@ -85,6 +89,11 @@ const botFactory = (el: typeof bots[0]) => {
   const sendMessage = retryableMethodFactory(
     el.instance.telegram.sendMessage.bind(el.instance.telegram)
   )
+  const parseCommand = (message: tt.Message) =>
+    (message.chat.type === 'private' && message.text?.match(/^\/(\w+).*$/)) ||
+    message.text?.match(
+      new RegExp(`^\\/(\\w+).*@${el.instance.options.username}$`)
+    )
 
   el.instance.on('message', (ctx) => {
     const currentChat = ctx.update.message?.chat
@@ -92,11 +101,6 @@ const botFactory = (el: typeof bots[0]) => {
     if (!currentChat || !message) {
       return
     }
-    const commandMatchArray =
-      (message.chat.type === 'private' && message.text?.match(/^\/(\w+).*$/)) ||
-      message.text?.match(
-        new RegExp(`^\\/(\\w+).*@${el.instance.options.username}$`)
-      )
 
     const commonProperties = {
       ctx,
@@ -108,10 +112,10 @@ const botFactory = (el: typeof bots[0]) => {
       currentChatId: message.chat.id
     }
 
-    if (commandMatchArray) {
+    if (parseCommand(message)) {
       eventBus.command.dispatch({
         ...commonProperties,
-        commandName: commandMatchArray[1],
+        commandName: parseCommand(message)?.[1]!,
         args: message
           .text!.match(/\/\w+(?:\s?@\w+)? ?(.*)/)![1]
           .trim()
@@ -120,7 +124,8 @@ const botFactory = (el: typeof bots[0]) => {
     }
     eventBus.message.dispatch({
       ...commonProperties,
-      isCommand: !!commandMatchArray
+      isCommand: !!parseCommand(message),
+      replyToCommand: message.reply_to_message && parseCommand(message.reply_to_message)?.[1]
     })
   })
 

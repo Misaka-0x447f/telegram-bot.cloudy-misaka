@@ -15,10 +15,11 @@ module.exports = {
     '@typescript-eslint'
   ],
   rules: {
-    'no-unused-vars': ['error', {
+    '@typescript-eslint/no-unused-vars': ['error', {
       varsIgnorePattern: '_+',
       argsIgnorePattern: '_+',
       ignoreRestSiblings: true
-    }]
+    }],
+    'no-unused-vars': 'off'
   }
 }
