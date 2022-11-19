@@ -1,4 +1,4 @@
-import { getTelegramBotByAnyBotName } from '../interface/telegram'
+import { getTelegramBotByAnyBotName, TelegrafEventBusListenerType } from '../interface/telegram'
 import { getVideoDetail } from '../interface/bilibili'
 import { ExtractPromise } from '../utils/type'
 import errorMessages from '../utils/errorMessages'
@@ -35,8 +35,25 @@ const paramDefinition = { replyMessageType: 'av 号或 bv 号。例如：av39092
 
 const botNames = Object.keys(persistConfig.entries.fetchVideo)
 
-botNames.forEach((el) =>
-  getTelegramBotByAnyBotName(el).command.sub(async ({ ctx, commandName, sendMessageToCurrentChat }) => {
+const sendParsed: (text: string) => TelegrafEventBusListenerType = (text: string) => async ({ sendMessageToCurrentChat }) => {
+  const biliRegex = /([ab]v)(.*)/im
+  if (text.match(biliRegex)) {
+    const result = text.match(biliRegex)!
+    const isAv = result[1].toLowerCase() === 'av'
+    const res = await getVideoDetail(
+      isAv ? { aid: result[2] } : { bvid: result[2] }
+    )
+    await sendMessageToCurrentChat(biliVideoDetailAdapter(res))
+    return
+  }
+  await sendMessageToCurrentChat(
+    errorMessages.illegalReplyMessage(paramDefinition)
+  )
+}
+
+botNames.forEach((el) => {
+  getTelegramBotByAnyBotName(el).command.sub(async (p) => {
+    const { ctx, commandName, sendMessageToCurrentChat } = p
     if (commandName !== 'fetch_video' || !ctx.chat?.id) return
     const reply = ctx.message?.reply_to_message
     if (!reply?.text) {
@@ -45,18 +62,17 @@ botNames.forEach((el) =>
       )
       return
     }
-    const biliRegex = /([ab]v)(.*)/im
-    if (reply.text.match(biliRegex)) {
-      const result = reply.text.match(biliRegex)!
-      const isAv = result[1].toLowerCase() === 'av'
-      const res = await getVideoDetail(
-        isAv ? { aid: result[2] } : { bvid: result[2] }
+    sendParsed(reply.text)(p)
+  })
+  getTelegramBotByAnyBotName(el).message.sub(async (p) => {
+    const { message, replyToCommand, sendMessageToCurrentChat } = p
+    if (replyToCommand !== 'fetch_video') return
+    if (!message.text) {
+      await sendMessageToCurrentChat(
+        errorMessages.illegalReplyMessageCount(paramDefinition)
       )
-      await sendMessageToCurrentChat(biliVideoDetailAdapter(res))
       return
     }
-    await sendMessageToCurrentChat(
-      errorMessages.illegalReplyMessage(paramDefinition)
-    )
+    sendParsed(message.text)(p)
   })
-)
+})
