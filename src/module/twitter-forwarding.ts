@@ -35,12 +35,12 @@ for (const [botName, config] of Object.entries(configs)) {
     }
     const chatId = ctx.chat?.id!
     if (commandName !== historyTweetCountCommand) return
-    if (!config.allowConfigUser?.length) {
-      bot.sendMessage(chatId, 'No allow user configured.').then()
+    if (!config.superusers?.length) {
+      bot.sendMessage(chatId, 'No superuser configured.').then()
       return
     }
-    if (!config.allowConfigUser.includes(chatId)) {
-      bot.sendMessage(chatId, 'Permission denied.').then()
+    if (!config.superusers.includes(chatId)) {
+      bot.sendMessage(chatId, 'You are not in the sudoers file. This incident will be reported.').then()
       return
     }
     if (args.length !== 1) {

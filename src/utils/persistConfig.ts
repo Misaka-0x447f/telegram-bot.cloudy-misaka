@@ -68,7 +68,7 @@ const data: {
     galnet: Record<
       TelegramBotName,
       ChatWorkerRule & {
-        allowConfigUser?: number[]
+        superusers?: number[]
       }
     >
     getUserInfo: Record<TelegramBotName, {}>
@@ -86,10 +86,13 @@ const data: {
       }
     >
     start: Record<TelegramBotName, Record<'actions', Actions>>
+    killall: {
+      superusers?: number[]
+    }
     twitterForwarding: Record<
       TelegramBotName,
       ChatWorkerRule & {
-        allowConfigUser?: number[]
+        superusers?: number[]
         options?: Partial<{
           excludeReplies: boolean
           excludeRetweets: boolean
