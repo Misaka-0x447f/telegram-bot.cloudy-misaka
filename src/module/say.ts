@@ -14,6 +14,15 @@ const replyTargetStore = {
   messageId: null as number | null
 }
 
+type ChatInfoParseResult = {
+  from: string,
+  chatId: string,
+  messageId: string,
+  userName: string,
+  link: string,
+  shortcut?: string
+}
+
 const chatInfoString = (chat: Chat, message: Message, shortcut?: string) =>
   formatYaml.render(
     omitBy(
@@ -32,12 +41,27 @@ const chatInfoString = (chat: Chat, message: Message, shortcut?: string) =>
 
 for (const [botName, config] of Object.entries(configs)) {
   const bot = getTelegramBotByAnyBotName(botName)
-  bot.message.sub(async ({ message, currentChat, currentChatId }) => {
+  bot.message.sub(async ({ ctx, message, currentChat, currentChatId }) => {
     const isPrivate = message.chat.type === 'private'
     if (
       !config.adminChatIdsCanReceiveReply ||
       (config.adminChatIds?.includes(currentChat.id) && isPrivate)
-    ) { return }
+    ) return
+    const parseResult = tryCatchReturn<ChatInfoParseResult | null>(
+      () => yaml.load(message.reply_to_message?.text || '') as ChatInfoParseResult,
+      () => null
+    )
+    if (parseResult) {
+      await ctx.telegram.sendCopy(
+        parseInt(parseResult.chatId),
+        message,
+        parseResult
+          ? {
+              reply_to_message_id: parseResult.messageId
+            }
+          : {}
+      )
+    }
     if (
       (message.reply_to_message &&
         message.reply_to_message?.from?.username === bot.username) ||
