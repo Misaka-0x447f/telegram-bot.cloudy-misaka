@@ -15,11 +15,11 @@ const replyTargetStore = {
 }
 
 type ChatInfoParseResult = {
-  from: string,
-  chatId: string,
-  messageId: string,
-  userName: string,
-  link: string,
+  from: string
+  chatId: string
+  messageId: string
+  userName: string
+  link: string
   shortcut?: string
 }
 
@@ -31,7 +31,11 @@ const chatInfoString = (chat: Chat, message: Message, shortcut?: string) =>
         chatId: chat.id,
         messageId: message.message_id,
         userName: chat.username,
-        link: chat.id.toString().startsWith('-100') && `https://t.me/c/${chat.id.toString().substring(4)}/${message.message_id}`,
+        link:
+          chat.id.toString().startsWith('-100') &&
+          `https://t.me/c/${chat.id.toString().substring(4)}/${
+            message.message_id
+          }`,
         shortcut
       },
       isUndefined
@@ -43,12 +47,10 @@ for (const [botName, config] of Object.entries(configs)) {
   const bot = getTelegramBotByAnyBotName(botName)
   bot.message.sub(async ({ ctx, message, currentChat, currentChatId }) => {
     const isPrivate = message.chat.type === 'private'
-    if (
-      !config.adminChatIdsCanReceiveReply ||
-      (config.adminChatIds?.includes(currentChat.id) && isPrivate)
-    ) return
+    if (!config.adminChatIdsCanReceiveReply) return
     const parseResult = tryCatchReturn<ChatInfoParseResult | null>(
-      () => yaml.load(message.reply_to_message?.text || '') as ChatInfoParseResult,
+      () =>
+        yaml.load(message.reply_to_message?.text || '') as ChatInfoParseResult,
       () => null
     )
     if (parseResult) {
@@ -61,7 +63,9 @@ for (const [botName, config] of Object.entries(configs)) {
             }
           : {}
       )
+      return
     }
+    if (config.adminChatIds?.includes(currentChat.id) && isPrivate) return
     if (
       (message.reply_to_message &&
         message.reply_to_message?.from?.username === bot.username) ||
@@ -106,63 +110,71 @@ for (const [botName, config] of Object.entries(configs)) {
       `成功。\n${formatYaml.render(replyTargetStore, { noColor: true })}`
     )
   })
-  bot.command.sub(async ({ ctx, commandName, args, currentChatId, sendMessageToCurrentChat }) => {
-    const paramDefinition: ParamsDefinition = {
-      argumentList: [
-        {
-          name: 'contact',
-          acceptable: `发送目标。可以是以下任意字符串或任意 ChatId：${config.list
-            .map((el) => el.name)
-            .join(
-              ', '
-            )}；如果不指定此参数，则必须先通过 /sayTarget 指令指定发送目标。`,
-          optional: true
-        }
-      ],
-      replyMessageType: '发送内容。'
+  bot.command.sub(
+    async ({
+      ctx,
+      commandName,
+      args,
+      currentChatId,
+      sendMessageToCurrentChat
+    }) => {
+      const paramDefinition: ParamsDefinition = {
+        argumentList: [
+          {
+            name: 'contact',
+            acceptable: `发送目标。可以是以下任意字符串或任意 ChatId：${config.list
+              .map((el) => el.name)
+              .join(
+                ', '
+              )}；如果不指定此参数，则必须先通过 /sayTarget 指令指定发送目标。`,
+            optional: true
+          }
+        ],
+        replyMessageType: '发送内容。'
+      }
+      if (commandName !== 'say' || !currentChatId) return
+      if (config.adminChatIds && !config.adminChatIds.includes(currentChatId)) {
+        await sendMessageToCurrentChat('Permission denied.')
+        return
+      }
+      if (
+        !isNumeric(args[0]) &&
+        !config.list.find((el) => args[0] === el.name) &&
+        !replyTargetStore.chatId
+      ) {
+        await sendMessageToCurrentChat(
+          errorMessages.illegalArguments(paramDefinition)
+        )
+        return
+      }
+      const predefinedTarget = config.list.find((el) => el.name === args[0])?.id
+      if (!ctx.message?.reply_to_message) {
+        await sendMessageToCurrentChat(
+          errorMessages.illegalReplyMessageCount(paramDefinition)
+        )
+        return
+      }
+      try {
+        const res = await ctx.telegram.sendCopy(
+          replyTargetStore.chatId || predefinedTarget || args[0],
+          ctx.message?.reply_to_message,
+          replyTargetStore.messageId
+            ? {
+                reply_to_message_id: replyTargetStore.messageId
+              }
+            : {}
+        )
+        await Promise.all(
+          config.adminChatIds?.map((user) =>
+            bot.sendMessage(user, stringify(res))
+          ) || []
+        )
+        replyTargetStore.messageId = null
+        replyTargetStore.chatId = null
+      } catch (e) {
+        await sendMessageToCurrentChat(stringify(e))
+        console.log(e)
+      }
     }
-    if (commandName !== 'say' || !currentChatId) return
-    if (config.adminChatIds && !config.adminChatIds.includes(currentChatId)) {
-      await sendMessageToCurrentChat('Permission denied.')
-      return
-    }
-    if (
-      !isNumeric(args[0]) &&
-      !config.list.find((el) => args[0] === el.name) &&
-      !replyTargetStore.chatId
-    ) {
-      await sendMessageToCurrentChat(
-        errorMessages.illegalArguments(paramDefinition)
-      )
-      return
-    }
-    const predefinedTarget = config.list.find((el) => el.name === args[0])?.id
-    if (!ctx.message?.reply_to_message) {
-      await sendMessageToCurrentChat(
-        errorMessages.illegalReplyMessageCount(paramDefinition)
-      )
-      return
-    }
-    try {
-      const res = await ctx.telegram.sendCopy(
-        replyTargetStore.chatId || predefinedTarget || args[0],
-        ctx.message?.reply_to_message,
-        replyTargetStore.messageId
-          ? {
-              reply_to_message_id: replyTargetStore.messageId
-            }
-          : {}
-      )
-      await Promise.all(
-        config.adminChatIds?.map((user) =>
-          bot.sendMessage(user, stringify(res))
-        ) || []
-      )
-      replyTargetStore.messageId = null
-      replyTargetStore.chatId = null
-    } catch (e) {
-      await sendMessageToCurrentChat(stringify(e))
-      console.log(e)
-    }
-  })
+  )
 }
