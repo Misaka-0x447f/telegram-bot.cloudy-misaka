@@ -45,7 +45,7 @@ const chatInfoString = (chat: Chat, message: Message, shortcut?: string) =>
 
 for (const [botName, config] of Object.entries(configs)) {
   const bot = getTelegramBotByAnyBotName(botName)
-  bot.message.sub(async ({ ctx, message, currentChat, currentChatId }) => {
+  bot.message.sub(async ({ sendMessageToCurrentChat, ctx, message, currentChat, currentChatId }) => {
     const isPrivate = message.chat.type === 'private'
     if (!config.adminChatIdsCanReceiveReply) return
     const parseResult = tryCatchReturn<ChatInfoParseResult | null>(
@@ -53,7 +53,11 @@ for (const [botName, config] of Object.entries(configs)) {
         yaml.load(message.reply_to_message?.text || '') as ChatInfoParseResult,
       () => null
     )
-    if (parseResult) {
+    if (parseResult && isPrivate) {
+      if (config.adminChatIds && !config.adminChatIds.includes(currentChatId)) {
+        await sendMessageToCurrentChat('Permission denied.')
+        return
+      }
       await ctx.telegram.sendCopy(
         parseInt(parseResult.chatId),
         message,
