@@ -1,0 +1,42 @@
+name: Trigger auto deployment for misaka-bot
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ master ]
+    paths:
+    - '**'
+    - '.github/workflows/misaka-bot-AutoDeployTrigger-c8edf222-b7b5-40b6-82dd-9def6998775f.yml'
+
+  # Allow mannually trigger 
+  workflow_dispatch:
+      
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.MISAKABOT_AZURE_CREDENTIALS }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ${{ github.workspace }} 
+          registryUrl: hub.docker.com
+          registryUsername: ${{ secrets.MISAKABOT_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.MISAKABOT_REGISTRY_PASSWORD }}
+          containerAppName: misaka-bot
+          resourceGroup: misaka-bot
+          imageToBuild: hub.docker.com/misaka-bot:${{ github.sha }}
+          
+
+     
+
