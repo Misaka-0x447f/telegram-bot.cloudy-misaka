@@ -20,6 +20,14 @@ jobs:
     steps:
       - name: Checkout to the branch
         uses: actions/checkout@v2
+      - name: setup
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: 'npm'
+
+      - name: build
+        run: npm ci && npm run build:js
 
       - name: Azure Login
         uses: azure/login@v1
