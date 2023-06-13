@@ -30,7 +30,7 @@ jobs:
         uses: azure/container-apps-deploy-action@v1
         with:
           appSourcePath: ${{ github.workspace }} 
-          registryUrl: hub.docker.com
+          registryUrl: docker.io
           registryUsername: ${{ secrets.MISAKABOT_REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.MISAKABOT_REGISTRY_PASSWORD }}
           containerAppName: misaka-bot
