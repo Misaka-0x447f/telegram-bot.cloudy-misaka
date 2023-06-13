@@ -45,6 +45,12 @@ const data: {
     tokenTelegram: Array<{ name: TelegramBotName; token: string }>
     tokenTwitter: string
     tokenDeepl: string
+    tokenS3: {
+      endpoint: string
+      bucket: string
+      id: string
+      key: string
+    }
     biliLive: Record<
       TelegramBotName,
       ChatWorkerRule<

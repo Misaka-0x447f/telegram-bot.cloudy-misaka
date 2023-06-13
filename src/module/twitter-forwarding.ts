@@ -81,7 +81,7 @@ for (const [botName, config] of Object.entries(configs)) {
     } else {
       currentStore.startFrom = recentTweets[historyCount - 1]
     }
-    await bot.sendMessage(chatId, 'Success.')
+    await bot.sendMessage(chatId, historyCount === 0 ? `Success.` : `Success. Next time will be start from: https://twitter.com/${config.watch}/status/${currentStore.startFrom}`)
   })
 }
 
