@@ -3,6 +3,7 @@ import { HttpsProxyAgent } from 'hpagent'
 import { Queue } from '../utils/queue'
 import { SocksProxyAgent } from 'socks-proxy-agent'
 import { TwitterApi } from 'twitter-api-v2'
+import telemetry from '../utils/telemetry'
 
 const queue = new Queue('twitter api')
 
@@ -32,5 +33,7 @@ export const getTweetTimelineById = (
         text: el.full_text
       }))
     }
+  }).catch(el => {
+    telemetry(el)
   })
 })

@@ -32,9 +32,9 @@ export default async (...log: any[]) => {
   let res = ''
   log.forEach((el) => {
     if (isString(el)) {
-      res = res.concat(el).concat('\n')
+      res = res.concat(el.substring(0, 300)).concat('\n')
     } else {
-      res = res.concat(stringify(el)).concat('\n')
+      res = res.concat(stringify(el).substring(0, 300)).concat('\n')
     }
   })
   const logFile = fsj.read(reportPath)
