@@ -7,7 +7,7 @@ import promiseRetry from 'promise-retry'
 persistConfig.init().then(async () => {
   telemetryInit()
   const bot = await import('./interface/telegram')
-  import('./module/index')
+  import('./modules/index')
 
   persistConfig.entries.insight.telegramSupervisor.map((target) =>
     promiseRetry(async (retry) => {
