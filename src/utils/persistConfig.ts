@@ -43,7 +43,6 @@ const data: {
       telegramSupervisor: number[]
     }
     tokenTelegram: Array<{ name: TelegramBotName; token: string }>
-    tokenTwitter: string
     tokenDeepl: string
     tokenS3: {
       endpoint: string
@@ -95,16 +94,6 @@ const data: {
     killall: {
       superusers?: number[]
     }
-    twitterForwarding: Record<
-      TelegramBotName,
-      ChatWorkerRule & {
-        superusers?: number[]
-        options?: Partial<{
-          excludeReplies: boolean
-          excludeRetweets: boolean
-        }>
-      }
-    >
   }
 } = { value: {} as any }
 
