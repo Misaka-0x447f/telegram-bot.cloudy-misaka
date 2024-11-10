@@ -12,21 +12,21 @@ export type RegexString = string
 
 export type Actions = ((
   | {
-      type: 'message'
-      text: string
-      filter?: RegexString
-      extra?: tt.ExtraEditMessage
-    }
+  type: 'message'
+  text: string
+  filter?: RegexString
+  extra?: tt.ExtraEditMessage
+}
   | {
-      type: 'sleep'
-      time: number
-    }
+  type: 'sleep'
+  time: number
+}
   | {
-      type: 'messageByForward'
-      source: number
-      messageId: number
-    }
-) & {
+  type: 'messageByForward'
+  source: number
+  messageId: number
+}
+  ) & {
   dest?: number
 })[][]
 
@@ -44,12 +44,17 @@ const data: {
     }
     tokenTelegram: Array<{ name: TelegramBotName; token: string }>
     tokenDeepl: string
-    tokenS3: {
-      endpoint: string
-      bucket: string
-      id: string
-      key: string
-    }
+    tokenBsky: {
+      service: string,
+      identifier: string,
+      password: string,
+    },
+    biliForwarding: Record<TelegramBotName, {
+      source: number
+      dest: number // 转发至
+      updateInterval: number
+    }>
+    // Available var: title, category, desc, lastOnline, liveMinutesUntilNow
     biliLive: Record<
       TelegramBotName,
       ChatWorkerRule<
@@ -68,13 +73,18 @@ const data: {
         }>
       }
     >
+    // Available var: content, url
+    bluesky: Record<TelegramBotName,
+      ChatWorkerRule<'newPostActions'> & {
+      superusers?: number[]
+    }>
     fetchSticker: Record<TelegramBotName, {}>
     fetchVideo: Record<TelegramBotName, {}>
     galnet: Record<
       TelegramBotName,
       ChatWorkerRule & {
-        superusers?: number[]
-      }
+      superusers?: number[]
+    }
     >
     getUserInfo: Record<TelegramBotName, {}>
     ping: Record<TelegramBotName, Record<'actions', Actions>>

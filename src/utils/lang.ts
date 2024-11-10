@@ -39,6 +39,16 @@ export const sha1 = (text: string) => {
   return sha1tool.digest('hex')
 }
 
+export const md5 = (input: string) => {
+  return crypto.createHash('md5').update(input).digest('hex');
+}
+
+export const hmacSha256 = (key: string, message: string) => {
+  const hmac = crypto.createHmac('sha256', key);
+  hmac.update(message);
+  return hmac.digest('hex');
+}
+
 export const tryCatchReturn = <T>(
   tryFunction: () => T,
   catchFunction: (_: Error) => T

@@ -4,6 +4,7 @@ import store from '../store/runtime'
 import { formatMinute, isNumeric } from '../utils/lang'
 import { TelegramBotName } from '../utils/type'
 import persistConfig from '../utils/persistConfig'
+import telemetry from "../utils/telemetry";
 
 const configs = persistConfig.entries.biliLive
 
@@ -90,7 +91,7 @@ const worker = async (
 
 for (const [botName, config] of Object.entries(configs)) {
   const run = () => {
-    worker(getTelegramBotByAnyBotName(botName), config).finally(() =>
+    worker(getTelegramBotByAnyBotName(botName), config).catch(telemetry).finally(() =>
       setTimeout(() => run(), config.updateInterval)
     )
   }

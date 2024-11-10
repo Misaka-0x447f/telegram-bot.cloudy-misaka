@@ -29,6 +29,7 @@ const sendReport = async (text?: string) => {
 }
 
 export default async (...log: any[]) => {
+  console.error(...log)
   let res = ''
   log.forEach((el) => {
     if (isString(el)) {

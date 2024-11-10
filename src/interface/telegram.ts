@@ -169,7 +169,9 @@ const botFactory = (el: typeof bots[0]) => {
               options.filterMethod &&
               step.filter &&
               !options.filterMethod(text, step.filter)
-            ) return
+            ) {
+              return
+            }
             await sendMessage(chatId, text, step?.extra)
           } else if (step.type === 'sleep') await sleep(step.time)
           else if (step.type === 'messageByForward') {

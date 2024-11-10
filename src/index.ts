@@ -1,13 +1,13 @@
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import persistConfig from './utils/persistConfig'
-import { telemetryInit } from './utils/telemetry'
+import telemetry, { telemetryInit } from './utils/telemetry'
 import promiseRetry from 'promise-retry'
 
 persistConfig.init().then(async () => {
   telemetryInit()
   const bot = await import('./interface/telegram')
-  import('./modules/index')
+  import('./modules/index').catch(telemetry)
 
   persistConfig.entries.insight.telegramSupervisor.map((target) =>
     promiseRetry(async (retry) => {

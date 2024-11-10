@@ -1,4 +1,4 @@
-FROM node:16
+FROM node:20
 LABEL author=447f.misaka@outlook.com
 WORKDIR ./misaka-app
 
