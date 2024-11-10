@@ -4,15 +4,15 @@ name: Trigger auto deployment for misaka-bot
 on:
   # Automatically trigger it when detected changes in repo
   push:
-    branches: 
+    branches:
       [ master ]
     paths:
     - '**'
     - '.github/workflows/misaka-bot-AutoDeployTrigger-c8edf222-b7b5-40b6-82dd-9def6998775f.yml'
 
-  # Allow mannually trigger 
+  # Allow mannually trigger
   workflow_dispatch:
-      
+
 jobs:
   build-and-deploy:
     environment: ci
@@ -22,13 +22,13 @@ jobs:
       - name: Checkout to the branch
         uses: actions/checkout@v2
       - name: setup
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 20
           cache: 'npm'
 
       - name: build
-        run: npm ci && npm run build:js
+        run: npm ci --force && npm run build:js
 
       - name: Azure Login
         uses: azure/login@v1
@@ -58,7 +58,7 @@ jobs:
           containerAppName: misaka-bot
           resourceGroup: misaka-bot
           imageToDeploy: misakakumomi/telegram-bot:${{ github.sha }}
-          
 
-     
+
+
 
