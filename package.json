@@ -8,7 +8,7 @@
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch",
     "lint": "eslint --fix ./src/**/*.ts",
-    "build:js": "npm run lint && rollup -c",
+    "build:js": "rollup -c",
     "build": "npm run build:js && docker build -t misakakumomi/telegram-bot .",
     "prepare": "husky install"
   },
