@@ -21,12 +21,14 @@ export const runActionFunctions = (text: string) => {
     const res = args.find(isObject) as { function: string; args: string } | null
     if (isNull(res)) {
       telemetry(
+        `utils/actionFunctions.ts/runActionFunctions`,
         `Assertion error: function parse error while resolving action functions. source string: ${text}, match result: ${match}, function parse result: ${args}`
       ).then()
       return '<function parse error>'
     }
     if (!isFunction((functions as any)[res.function])) {
       telemetry(
+        `utils/actionFunctions.ts/runActionFunctions`,
         `Assertion error: action function not exist. Expected one of [${Object.keys(
           functions
         )}], got ${res.function}.`

@@ -91,7 +91,7 @@ const worker = async (
 
 for (const [botName, config] of Object.entries(configs)) {
   const run = () => {
-    worker(getTelegramBotByAnyBotName(botName), config).catch(telemetry).finally(() =>
+    worker(getTelegramBotByAnyBotName(botName), config).catch((...args) => telemetry(`bili-live.ts/worker`, ...args)).finally(() =>
       setTimeout(() => run(), config.updateInterval)
     )
   }

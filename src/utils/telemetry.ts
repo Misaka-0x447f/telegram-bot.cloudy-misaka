@@ -28,14 +28,14 @@ const sendReport = async (text?: string) => {
   ))
 }
 
-export default async (...log: any[]) => {
+export default async (label: string, ...log: any[]) => {
   console.error(...log)
   let res = ''
   log.forEach((el) => {
     if (isString(el)) {
-      res = res.concat(el.substring(0, 300)).concat('\n')
+      res = res.concat(`[${label}]`).concat(el.substring(0, 300)).concat('\n')
     } else {
-      res = res.concat(stringify(el).substring(0, 300)).concat('\n')
+      res = res.concat(`[${label}]`).concat(stringify(el).substring(0, 300)).concat('\n')
     }
   })
   const logFile = fsj.read(reportPath)

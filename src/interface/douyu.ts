@@ -35,7 +35,7 @@ export const fetchRoomStatus = async (room: '6655') => {
       }
     }
   } catch (e) {
-    telemetry('Error while fetching room info.', e)
+    telemetry(`interface/douyu.ts/fetchRoomStatus`, 'Error while fetching room info.', e)
     return null
   }
 }

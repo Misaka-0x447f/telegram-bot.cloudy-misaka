@@ -156,6 +156,7 @@ const botFactory = (el: typeof bots[0]) => {
           const chatId = step.dest || options.defaultChatId
           if (!chatId) {
             await telemetry(
+              `interface/telegram.ts/runActions`,
               `AssertionError: ChatId was not defined with step ${JSON.stringify(
                 step
               )}`
@@ -208,7 +209,8 @@ export const getTelegramBotByAnyBotName = (botName: string) => {
     const message = `Assertion error: Bot name ${botName} does not exist, but mentioned by config file or something else. ${
       new Error().stack
     }`
-    telemetry(message).then()
+    telemetry(`interface/telegram.ts/getTelegramBotByAnyBotName`,
+      message).then()
     throw new Error(message)
   }
   return exportBot[botName as TelegramBotName]

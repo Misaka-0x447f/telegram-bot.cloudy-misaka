@@ -15,11 +15,13 @@ export const translateText = async (text: string, {
       target_lang: target
     }
   }).json().catch(e => {
-    telemetry('Error while translating text.', e)
+    telemetry(`interface/translate.ts/translateText`,
+      'Error while translating text.', e)
     return null
   })
   if (!data.translations) {
-    await telemetry(`Error while translating text. ${JSON.stringify(data)}`)
+    await telemetry(`interface/translate.ts/translateText`,
+      `Error while translating text, response invalid. ${JSON.stringify(data)}`)
     return null
   }
   return data.translations as Array<{

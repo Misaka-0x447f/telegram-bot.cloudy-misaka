@@ -92,7 +92,8 @@ const worker = async (botName: string) => {
     ...config.options
   }).catch((err: HTTPError) => {
     console.error(err)
-    telemetry(err.message, err.response, err)
+    telemetry(`modules/bilibili-forwarding.ts/worker`,
+      err.message, err.response, err)
   })
   if (!recentTweetsFromServer?.data) return
   if (!store[botName as TelegramBotName]) {

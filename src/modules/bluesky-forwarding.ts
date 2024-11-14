@@ -96,7 +96,9 @@ const worker = async (botName: string) => {
     excludeReplies: true
   })
   if (!recentPostFromServer?.data) {
-    void telemetry(`bluesky request returned with no data: ${botName}`)
+    void telemetry(
+      `bluesky-forwarding.ts/worker`,
+      `bluesky request returned with no data: ${botName}`)
     return
   }
   if (!store[botName as TelegramBotName]) {
@@ -136,7 +138,7 @@ const worker = async (botName: string) => {
   currentStore.startFrom = (last(postsToSend)!.unixTimeStamp) + 1
 }
 const main = async (botName: string) => {
-  await worker(botName).catch(telemetry)
+  await worker(botName).catch((...args) => telemetry(`bluesky-forwarding.ts/worker`, ...args))
   setTimeout(
     () => main(botName),
     configs[botName as TelegramBotName].updateInterval

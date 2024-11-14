@@ -93,8 +93,9 @@ const worker = async (botName: string) => {
   const config = configs[botName as TelegramBotName]
   const recentGalnetNewsFromServer = await fetchGalnet().catch(
     (err: HTTPError) => {
-      console.error(err)
-      telemetry(err.message, err.response, err)
+      telemetry(
+        `modules/galnet.ts/worker`,
+        err.message, err.response, err)
     }
   )
   if (
@@ -104,7 +105,9 @@ const worker = async (botName: string) => {
       Object.values(entries).some((el) => !el)
     )
   ) {
-    await telemetry('Galnet 数据异常。', recentGalnetNewsFromServer)
+    await telemetry(
+      `modules/galnet.ts/worker`,
+      'Galnet 数据异常。', recentGalnetNewsFromServer)
     return
   }
   if (!store[botName as TelegramBotName]) {
@@ -158,7 +161,9 @@ const worker = async (botName: string) => {
       )
     }
     if (translateErrorString) {
-      await telemetry(translateErrorString)
+      await telemetry(
+        `modules/galnet.ts/worker`,
+        translateErrorString)
     }
     const params = news
     for (const [i, v] of Object.entries(params)) {
