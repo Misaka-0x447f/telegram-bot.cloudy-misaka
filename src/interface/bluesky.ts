@@ -13,6 +13,8 @@ export type BlueskyPost = {
   url: string,
 }
 
+let loggedIn = false
+
 export const getFeedByHandle = (
   handle: string,
   {
@@ -20,10 +22,13 @@ export const getFeedByHandle = (
     excludeReplies = false
   } = {}
 ) => queue.push(async () => {
-  await agent.login({
-    identifier: persistConfig.entries.tokenBsky.identifier,
-    password: persistConfig.entries.tokenBsky.password
-  })
+  if (!loggedIn) {
+    await agent.login({
+      identifier: persistConfig.entries.tokenBsky.identifier,
+      password: persistConfig.entries.tokenBsky.password
+    })
+    loggedIn = true
+  }
   return agent.getAuthorFeed({
     actor: handle,
     limit,
