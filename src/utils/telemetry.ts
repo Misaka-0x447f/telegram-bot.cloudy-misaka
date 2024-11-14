@@ -33,9 +33,9 @@ export default async (label: string, ...log: any[]) => {
   let res = ''
   log.forEach((el) => {
     if (isString(el)) {
-      res = res.concat(`[${label}]`).concat(el.substring(0, 300)).concat('\n')
+      res = res.concat(`[${label}]`).concat(el.substring(0, 1000)).concat('\n')
     } else {
-      res = res.concat(`[${label}]`).concat(stringify(el).substring(0, 300)).concat('\n')
+      res = res.concat(`[${label}]`).concat(stringify(el).substring(0, 1000)).concat('\n')
     }
   })
   const logFile = fsj.read(reportPath)
