@@ -1,10 +1,10 @@
-import telemetry from '../utils/telemetry'
-import { isNull, last } from 'lodash-es'
+import telemetry from "../utils/telemetry";
+import { isNull, last } from "lodash-es";
 import { TelegramBotName } from "../utils/type";
-import persistConfig from '../utils/persistConfig'
-import { getTelegramBotByAnyBotName } from '../interface/telegram'
-import { argsTypeValidation, isNumeric } from '../utils/lang'
-import errorMessages, { ParamsDefinition } from '../utils/errorMessages'
+import persistConfig from "../utils/persistConfig";
+import { getTelegramBotByAnyBotName } from "../interface/telegram";
+import { argsTypeValidation, isNumeric } from "../utils/lang";
+import errorMessages, { ParamsDefinition } from "../utils/errorMessages";
 import { BlueskyPost, getFeedByHandle } from "../interface/bluesky";
 
 const configs = persistConfig.entries.bluesky
@@ -92,7 +92,7 @@ const worker = async (botName: string) => {
   const bot = getTelegramBotByAnyBotName(botName)
   const config = configs[botName as TelegramBotName]
   const recentPostFromServer = await getFeedByHandle(config.watch, {
-    limit: 5,
+    limit: 10,
     excludeReplies: true
   })
   if (!recentPostFromServer?.data) {
@@ -112,13 +112,11 @@ const worker = async (botName: string) => {
     .concat()
 
   if (isNull(currentStore.startFrom)) {
-    const recentTweets = currentStore.recentPosts.concat()
-    currentStore.startFrom = recentTweets[0].unixTimeStamp + 1
-    return
+    const recentPosts = currentStore.recentPosts.concat()
+    currentStore.startFrom = Math.max(...recentPosts.map(post => post.unixTimeStamp)) + 1;
   }
   const postsToSend = recentPostFromServer.data
     .filter((el) => el.unixTimeStamp >= currentStore.startFrom!)
-    .concat()
   if (!postsToSend.length) return
   for (const post of postsToSend) {
     await bot

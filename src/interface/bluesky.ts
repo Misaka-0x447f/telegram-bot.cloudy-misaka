@@ -43,8 +43,10 @@ export const getFeedByHandle = (
         }
         return {
           id: post.post.cid,
+          // @ts-expect-error undocumented feature
           text: post.post.record.text,
-          unixTimeStamp: new Date(post.post.record.createdAt).getTime(),
+          // @ts-expect-error undocumented feature
+          unixTimeStamp: new Date(post.reason?.indexedAt ?? post.post.record?.createdAt).getTime(),
           url: `https://bsky.app/profile/${handle}/post/${postId ?? 'cannot-find-post-id'}`
         } as BlueskyPost
       })
