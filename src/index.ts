@@ -12,7 +12,7 @@ persistConfig.init().then(async () => {
   persistConfig.entries.insight.telegramSupervisor.map((target) =>
     promiseRetry(async (retry) => {
       bot.exportBot.misaka
-        .sendMessage(target, 'System boot completed.\n' + process.env.BUILT_STRING)
+        .sendMessage(target, `System boot completed. ${process.env.BUILT_STRING}`)
         .catch(retry)
     })
   )

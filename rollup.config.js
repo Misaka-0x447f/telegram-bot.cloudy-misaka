@@ -28,7 +28,7 @@ export default {
 
   plugins: [
     replace({
-      'process.env.BUILT_STRING': `\`Built from revision ${commit.shortCommit} (${commit.date}) with commitMsg "${commit.message}" at ${new Date().toLocaleString('zh', { timeZone: 'Asia/Shanghai' })}\``
+      'process.env.BUILT_STRING': `\`Built from revision ${commit.shortCommit} (${commit.date}) at ${new Date().toLocaleString('zh', { timeZone: 'Asia/Shanghai' })}\``
     }),
 
     // Allows node_modules resolution
