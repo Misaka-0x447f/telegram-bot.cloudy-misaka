@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/../config-server.cloudy-misaka/.idea/config-server.cloudy-misaka.iml" filepath="$PROJECT_DIR$/../config-server.cloudy-misaka/.idea/config-server.cloudy-misaka.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/misaka-telegram-bot.iml" filepath="$PROJECT_DIR$/.idea/misaka-telegram-bot.iml" />
     </modules>
   </component>

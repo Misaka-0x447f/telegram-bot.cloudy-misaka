@@ -23,6 +23,17 @@ type ChatInfoParseResult = {
   shortcut?: string
 }
 
+const spamPatterns = [
+  /(tg|电报|引流|群发|拉人|推广|私信|代开)/i,
+  /(担保|彩票|投注|娱乐|分红|工资|返点|返水)/i,
+  /(注册链接|登录地址|测速地址|立即体验|老板专用)/i,
+  /https?:\/\/[^\s]+/i,
+  /t\.me\/[^\s]+/i,
+  /@\w{3,}/i,
+  /主营业务|老群|老频道|机器人/i
+]
+
+
 const chatInfoString = (chat: Chat, message: Message, shortcut?: string) =>
   formatYaml.render(
     omitBy(
@@ -76,6 +87,14 @@ for (const [botName, config] of Object.entries(configs)) {
       message.text?.includes(`@${bot.username}`) ||
       isPrivate
     ) {
+      const textToCheck = `${message.text || ''} ${message.caption || ''}`
+      const matchCount = spamPatterns.reduce((acc, re) => acc + (re.test(textToCheck) ? 1 : 0), 0)
+      if (matchCount >= 2) {
+        await sendMessageToCurrentChat('`filtered`', {
+          parse_mode: 'MarkdownV2'
+        })
+        return
+      }
       const shortcut = config.list.find((el) => el.id === currentChatId)?.name
 
       for (const el of config.adminChatIds || []) {
