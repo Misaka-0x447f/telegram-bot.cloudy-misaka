@@ -89,7 +89,8 @@ for (const [botName, config] of Object.entries(configs)) {
     ) {
       const textToCheck = `${message.text || ''} ${message.caption || ''}`
       const matchCount = spamPatterns.reduce((acc, re) => acc + (re.test(textToCheck) ? 1 : 0), 0)
-      if (matchCount >= 2) {
+      // 有按钮就认为是垃圾消息
+      if (matchCount >= 2 || message.reply_markup?.inline_keyboard) {
         await sendMessageToCurrentChat('`filtered`', {
           parse_mode: 'MarkdownV2'
         })
