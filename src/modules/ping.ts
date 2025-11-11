@@ -11,6 +11,6 @@ for (const [botName, config] of Object.entries(configs)) {
       (message.text?.includes(`/ping@${bot.username}`) &&
         message.chat.type !== 'private')
     if (!isPing) return
-    bot.runActions(config.actions, { defaultChatId: currentChat.id }, { utcDate: new Date().toUTCString() }).then()
+    bot.runActions(config.actions, { defaultChatId: currentChat.id }, { utcDate: new Date().toUTCString(), builtString: process.env.BUILT_STRING }).then()
   })
 }
