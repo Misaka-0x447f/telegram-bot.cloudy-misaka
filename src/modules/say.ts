@@ -191,15 +191,14 @@ for (const [botName, config] of Object.entries(configs)) {
           }
         }
       }
-
+      const filterLines = [
+        '```plaintext',
+        `SPAM score [${matchCount}/${threshold}]`,
+        ...ruleDetails.filter((r) => r.weight > 0).map((r) => `- ${r.label}${r.delayed ? ' (delayed)' : ''}: ${r.weight}`),
+        '```',
+      ]
       if (isAdmin) {
-        const lines = [
-          '```plaintext',
-          `Spam filter rules ${matchCount}/${threshold}:`,
-          ...ruleDetails.map((r) => `- ${r.label}${r.delayed ? ' (delayed)' : ''}: ${r.weight}`),
-          '```',
-        ]
-        await sendMessageToCurrentChat(lines.join('\n'), {
+        await sendMessageToCurrentChat(filterLines.join('\n'), {
           parse_mode: 'MarkdownV2'
         })
       }
@@ -217,7 +216,7 @@ for (const [botName, config] of Object.entries(configs)) {
         await bot.forwardMessage(el, currentChatId, message.message_id)
         await bot.sendMessage(
           el,
-          chatInfoString(currentChat, message, shortcut)
+          chatInfoString(currentChat, message, shortcut).concat(matchCount > 0 ? `\n${filterLines.join('\n')}` : '' ),
         )
       }
     }
