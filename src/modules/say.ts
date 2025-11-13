@@ -24,7 +24,7 @@ type ChatInfoParseResult = {
 }
 
 const spamPatterns = [
-  /(tg|电报|引流|群发|拉人|推广|私信|代开)/i,
+  /(tg|电报|引流|群发|拉人|推广|广告|退订|私信|代开)/i,
   /(担保|彩票|投注|娱乐|分红|工资|返点|返水)/i,
   /(注册链接|登录地址|测速地址|立即体验|老板专用|联系)/i,
   /https?:\/\/[^\s]+/i,
@@ -80,7 +80,6 @@ for (const [botName, config] of Object.entries(configs)) {
       )
       return
     }
-    if (config.adminChatIds?.includes(currentChat.id) && isPrivate) return
     if (
       (message.reply_to_message &&
         message.reply_to_message?.from?.username === bot.username) ||
@@ -89,13 +88,14 @@ for (const [botName, config] of Object.entries(configs)) {
     ) {
       const textToCheck = `${message.text || ''} ${message.caption || ''}`
       const matchCount = spamPatterns.reduce((acc, re) => acc + (re.test(textToCheck) ? 1 : 0), 0)
-      // 有按钮就认为是垃圾消息
+      // 有按钮就认为是垃圾消息（让管理员可见以方便测试）
       if (matchCount >= 2 || message.reply_markup?.inline_keyboard) {
         await sendMessageToCurrentChat('`filtered`', {
           parse_mode: 'MarkdownV2'
         })
         return
       }
+      if (config.adminChatIds?.includes(currentChat.id) && isPrivate) return
       const shortcut = config.list.find((el) => el.id === currentChatId)?.name
 
       for (const el of config.adminChatIds || []) {
