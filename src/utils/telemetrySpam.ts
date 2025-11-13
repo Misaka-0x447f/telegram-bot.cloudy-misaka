@@ -74,6 +74,8 @@ const buildAndSendHourlyReport = async () => {
   const count = lastHourEvents.length
   const samples = pickRandomK(lastHourEvents, 10)
 
+  if (!count) return
+
   // 先发统计文案
   await sendReportText(`Spam summary in past 1 hour: ${count}\nSamples (forwarded up to 10 below)`)
 
