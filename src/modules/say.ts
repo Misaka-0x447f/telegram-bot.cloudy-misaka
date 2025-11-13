@@ -1,5 +1,5 @@
 import persistConfig from '../utils/persistConfig'
-import { getTelegramBotByAnyBotName } from '../interface/telegram'
+import { BotType, getTelegramBotByAnyBotName } from "../interface/telegram";
 import errorMessages, { ParamsDefinition } from '../utils/errorMessages'
 import { isNumeric, stringify, tryCatchReturn } from '../utils/lang'
 import { Chat } from 'telegraf/typings/telegram-types'
@@ -7,6 +7,7 @@ import { Message } from 'telegram-typings'
 import formatYaml from 'prettyjson'
 import yaml from 'js-yaml'
 import { isUndefined, omitBy } from 'lodash-es'
+import telemetry from "../utils/telemetry";
 
 const configs = persistConfig.entries.say
 const replyTargetStore = {
@@ -27,10 +28,86 @@ const spamPatterns = [
   /(tg|电报|引流|群发|拉人|推广|广告|退订|私信|代开)/i,
   /(担保|彩票|投注|娱乐|分红|工资|返点|返水)/i,
   /(注册链接|登录地址|测速地址|立即体验|老板专用|联系)/i,
-  /@\w{3,}/i,
   /(主营业务|老群|老频道|机器人|会员)/i
 ]
 
+
+type MatchRule = {
+  label: string
+  // 返回权重（分数），而非布尔。0 表示不加分。
+  test: () => Promise<number>
+  /**
+   * delayed 表示：在非延迟规则全部执行后，如果分数仍不足，再执行这些规则。
+   */
+  delayed?: boolean
+}
+
+// 动态规则构建器：根据当前 message 和 bot 构建规则，test 内部返回权重
+const buildMatchRules = (message: Message, bot: BotType): MatchRule[] => {
+  const rules: MatchRule[] = []
+
+  // 1) 文本垃圾关键词命中数量累加
+  rules.push({
+    label: 'spamPatterns',
+    test: async () => {
+      const textToCheck = `${message.text || ''} ${message.caption || ''}`
+      return spamPatterns.reduce((acc, re) => acc + (re.test(textToCheck) ? 1 : 0), 0)
+    }
+  })
+
+  // 2) 存在 inline keyboard
+  rules.push({
+    label: 'inlineKeyboard',
+    test: async () => (message.reply_markup?.inline_keyboard ? 2 : 0)
+  })
+
+  // 3) entities: url/mention 数量累加
+  rules.push({
+    label: 'entities:url-or-mention',
+    test: async () => (message.entities || []).filter((e) => ['url', 'mention'].includes((e as unknown as { type?: string }).type as string)).length
+  })
+
+  // 4) caption_entities: text_link 数量累加
+  rules.push({
+    label: 'caption_entities:text_link',
+    test: async () => (message.caption_entities || []).filter((e) => (e as unknown as { type?: string }).type === 'text_link').length
+  })
+
+  // 5) 名字均为英文词（<=10 个字母）命中 +1
+  rules.push({
+    label: 'bothNameIsEnglishWord',
+    test: async () => {
+      const first = message.forward_from?.first_name || message.from?.first_name
+      const last = message.forward_from?.last_name || message.from?.last_name
+      const arr = [first, last]
+      const ok = arr.every((name) => !!name && /^[a-zA-Z]{,10}$/.test(name))
+      return ok ? 1 : 0
+    }
+  })
+
+  // 6) Unicode Combining Marks 命中 +1
+  rules.push({
+    label: 'combiningMarks',
+    test: async () => {
+      const combiningMarks = /[\u0300-\u036F\u1AB0-\u1AFF\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]/g
+      return combiningMarks.test(message.text || '') ? 1 : 0
+    }
+  })
+
+  // 7) 延迟规则：用户头像为 0 则 +1（异常上报 telemetry）
+  rules.push({
+    label: 'noProfilePhoto',
+    delayed: true,
+    test: async () => {
+      const originUserId = message.forward_from?.id || message.from?.id
+      if (!originUserId) return 0
+      const photos = await bot.instance.telegram.getUserProfilePhotos(originUserId, 0, 1)
+      return photos?.total_count === 0 ? 1 : 0
+    }
+  })
+
+  return rules
+}
 
 const chatInfoString = (chat: Chat, message: Message, shortcut?: string) =>
   formatYaml.render(
@@ -84,21 +161,51 @@ for (const [botName, config] of Object.entries(configs)) {
       message.text?.includes(`@${bot.username}`) ||
       isPrivate
     ) {
-      const textToCheck = `${message.text || ''} ${message.caption || ''}`
-      let matchCount = spamPatterns.reduce((acc, re) => acc + (re.test(textToCheck) ? 1 : 0), 0)
-      if (message.reply_markup?.inline_keyboard) {
-        matchCount += 2;
-      }
-      if (message.entities) {
-        matchCount += message.entities.filter(e => e.type === 'url').length;
-      }
-      if (message.caption_entities) {
-        matchCount += message.caption_entities.filter(e => e.type === 'text_link').length;
+      const threshold = 2
+      let matchCount = 0
+      const ruleDetails: Array<{ label: string; weight: number; delayed?: boolean }> = []
+
+      // 使用动态规则构建器
+      const rules = buildMatchRules(message, bot)
+      // 先执行非 delayed 规则
+      for (const rule of rules.filter((r) => !r.delayed)) {
+        try {
+          const w = Math.max(0, await rule.test())
+          matchCount += w
+          ruleDetails.push({ label: rule.label, weight: w, delayed: !!rule.delayed })
+        } catch (e) {
+          await telemetry('say.ts', '运行规则失败', { error: stringify(e) })
+        }
       }
       const isAdmin = config.adminChatIds?.includes(currentChat.id)
-      // 有按钮就认为是垃圾消息（让管理员可见以方便测试）
-      if (matchCount >= 2) {
-        await sendMessageToCurrentChat(`\`filtered by firewall(${isAdmin ? 'weight=' + matchCount : (new Date().getMilliseconds() + 10) % 30})\``, {
+      // 如果分数不足，再执行 delayed 规则（如头像检查）
+      if (matchCount < threshold) {
+        for (const rule of rules.filter((r) => r.delayed)) {
+          try {
+            const w = Math.max(0, await rule.test())
+            matchCount += w
+            ruleDetails.push({ label: rule.label, weight: w, delayed: !!rule.delayed })
+            if (matchCount >= threshold) break
+          } catch (e) {
+            await telemetry('say.ts', '运行规则失败', { error: stringify(e) })
+          }
+        }
+      }
+
+      if (isAdmin) {
+        const lines = [
+          '```plaintext',
+          `Spam filter rules ${matchCount}/${threshold}:`,
+          ...ruleDetails.map((r) => `- ${r.label}${r.delayed ? ' (delayed)' : ''}: ${r.weight}`),
+          '```',
+        ]
+        await sendMessageToCurrentChat(lines.join('\n'), {
+          parse_mode: 'MarkdownV2'
+        })
+      }
+
+      if (matchCount >= threshold) {
+        await sendMessageToCurrentChat(`\`filtered(${(new Date().getMilliseconds() + 10) % 30})\``, {
           parse_mode: 'MarkdownV2'
         })
         return
