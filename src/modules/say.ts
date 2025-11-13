@@ -8,6 +8,7 @@ import formatYaml from 'prettyjson'
 import yaml from 'js-yaml'
 import { isUndefined, omitBy } from 'lodash-es'
 import telemetry from "../utils/telemetry";
+import { recordSpam } from '../utils/telemetrySpam'
 
 const configs = persistConfig.entries.say
 const replyTargetStore = {
@@ -204,6 +205,12 @@ for (const [botName, config] of Object.entries(configs)) {
       }
 
       if (matchCount >= threshold) {
+        try {
+          // 记录完整消息，后续按小时转发到遥测频道
+          recordSpam(botName, currentChatId, message.message_id, message)
+        } catch (e) {
+          await telemetry('say.ts', 'recordSpam 失败', { error: stringify(e) })
+        }
         await sendMessageToCurrentChat(`\`filtered(${(new Date().getMilliseconds() + 10) % 30})\``, {
           parse_mode: 'MarkdownV2'
         })
