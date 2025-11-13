@@ -27,8 +27,6 @@ const spamPatterns = [
   /(tg|电报|引流|群发|拉人|推广|广告|退订|私信|代开)/i,
   /(担保|彩票|投注|娱乐|分红|工资|返点|返水)/i,
   /(注册链接|登录地址|测速地址|立即体验|老板专用|联系)/i,
-  /https?:\/\/[^\s]+/i,
-  /t\.me\/[^\s]+/i,
   /@\w{3,}/i,
   /(主营业务|老群|老频道|机器人|会员)/i
 ]
@@ -87,10 +85,16 @@ for (const [botName, config] of Object.entries(configs)) {
       isPrivate
     ) {
       const textToCheck = `${message.text || ''} ${message.caption || ''}`
-      const matchCount = spamPatterns.reduce((acc, re) => acc + (re.test(textToCheck) ? 1 : 0), 0)
+      let matchCount = spamPatterns.reduce((acc, re) => acc + (re.test(textToCheck) ? 1 : 0), 0)
+      if (message.reply_markup?.inline_keyboard) {
+        matchCount += 2;
+      }
+      if (message.caption_entities) {
+        matchCount += message.caption_entities.filter(e => e.type === 'text_link').length / 2;
+      }
       // 有按钮就认为是垃圾消息（让管理员可见以方便测试）
-      if (matchCount >= 2 || message.reply_markup?.inline_keyboard) {
-        await sendMessageToCurrentChat('`filtered`', {
+      if (matchCount >= 2) {
+        await sendMessageToCurrentChat(`\`filtered by firewall(${matchCount})\``, {
           parse_mode: 'MarkdownV2'
         })
         return
