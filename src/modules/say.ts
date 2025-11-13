@@ -89,17 +89,21 @@ for (const [botName, config] of Object.entries(configs)) {
       if (message.reply_markup?.inline_keyboard) {
         matchCount += 2;
       }
-      if (message.caption_entities) {
-        matchCount += message.caption_entities.filter(e => e.type === 'text_link').length / 2;
+      if (message.entities) {
+        matchCount += message.entities.filter(e => e.type === 'url').length;
       }
+      if (message.caption_entities) {
+        matchCount += message.caption_entities.filter(e => e.type === 'text_link').length;
+      }
+      const isAdmin = config.adminChatIds?.includes(currentChat.id)
       // 有按钮就认为是垃圾消息（让管理员可见以方便测试）
       if (matchCount >= 2) {
-        await sendMessageToCurrentChat(`\`filtered by firewall(${matchCount})\``, {
+        await sendMessageToCurrentChat(`\`filtered by firewall(${isAdmin ? 'weight=' + matchCount : (new Date().getMilliseconds() + 10) % 30})\``, {
           parse_mode: 'MarkdownV2'
         })
         return
       }
-      if (config.adminChatIds?.includes(currentChat.id) && isPrivate) return
+      if (isAdmin && isPrivate) return
       const shortcut = config.list.find((el) => el.id === currentChatId)?.name
 
       for (const el of config.adminChatIds || []) {
