@@ -223,8 +223,11 @@ for (const [botName, config] of Object.entries(configs)) {
         await bot.forwardMessage(el, currentChatId, message.message_id)
         await bot.sendMessage(
           el,
-          chatInfoString(currentChat, message, shortcut).concat(matchCount > 0 ? `\n${filterLines.join('\n')}` : '' ),
+          chatInfoString(currentChat, message, shortcut),
         )
+        await bot.sendMessage(el, filterLines.join('\n'), {
+          parse_mode: 'MarkdownV2'
+        })
       }
     }
   })
