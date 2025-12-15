@@ -66,37 +66,56 @@ const buildMatchRules = (message: Message, bot: BotType): MatchRule[] => {
   // 3) entities: url/mention 数量累加
   rules.push({
     label: 'entities:url-or-mention',
-    test: async () => (message.entities || []).filter((e) => ['url', 'mention'].includes((e as unknown as { type?: string }).type as string)).length
+    test: async () => (message.entities || []).filter((e) => ['url', 'mention'].includes(e.type)).length
   })
 
-  // 4) caption_entities: text_link 数量累加
+  // 4) caption_entities: 实体数量累加
   rules.push({
     label: 'caption_entities:text_link',
-    test: async () => (message.caption_entities || []).filter((e) => (e as unknown as { type?: string }).type === 'text_link').length
+    test: async () => (message.caption_entities || []).filter((e) => (['text_link', 'url', 'mention', 'bold'].includes(e.type))).length
   })
 
-  // 5) 名字均为英文词（<=10 个字母）命中 +1
+  // 5) forward_origin.type 为 channel 的 +1
   rules.push({
-    label: 'bothNameIsEnglishWord',
-    test: async () => {
-      const first = message.forward_from?.first_name || message.from?.first_name
-      const last = message.forward_from?.last_name || message.from?.last_name
-      const arr = [first, last]
-      const ok = arr.every((name) => !!name && /^[a-zA-Z]{,10}$/.test(name))
-      return ok ? 1 : 0
-    }
-  })
+    label: "forwardFromChannel",
+    // @ts-expect-error 版本过老
+    test: async () => (message.forward_origin?.type === "channel" ? 1 : 0)
+  });
 
-  // 6) Unicode Combining Marks 命中 +1
+  // 6) 名字均为英文词或包含 emoji 命中 +1
   rules.push({
-    label: 'combiningMarks',
+    label: "bothNameIsEnglishWordOrEmoji",
     test: async () => {
-      const combiningMarks = /[\u0300-\u036F\u1AB0-\u1AFF\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]/g
-      return combiningMarks.test(message.text || '') ? 1 : 0
+      const first = message.forward_from?.first_name || message.from?.first_name;
+      const last = message.forward_from?.last_name || message.from?.last_name;
+      const arr = [first, last];
+      const ok = arr.every((name) => {
+        if (!name) return false;
+        // 检查是否为英文词（<=10 个字母）或包含 emoji
+        const isEnglishWord = /^[a-zA-Z]{,10}$/.test(name);
+        const hasEmoji = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{FE00}-\u{FE0F}\u{200D}]/u.test(name);
+        return isEnglishWord || hasEmoji;
+      });
+      return ok ? 1 : 0;
     }
-  })
+  });
 
-  // 7) 延迟规则：用户头像为 0 则 +1（异常上报 telemetry）
+  // 7) Unicode Combining Marks 命中 +1
+  rules.push({
+    label: "combiningMarks",
+    test: async () => {
+      const combiningMarks = /[\u0300-\u036F\u1AB0-\u1AFF\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]/g;
+      return combiningMarks.test(message.text || "") ? 1 : 0;
+    }
+  });
+
+  // 8) 精确匹配 "/start" 命令 +1
+  rules.push({
+    label: "exactStartCommand",
+    test: async () => (message.text === "/start" ? 1 : 0)
+  });
+
+  // 9) 延迟规则：用户头像为 0 则 +1（异常上报 telemetry）
   rules.push({
     label: 'noProfilePhoto',
     delayed: true,
@@ -169,6 +188,7 @@ for (const [botName, config] of Object.entries(configs)) {
 
       // 使用动态规则构建器
       const rules = buildMatchRules(message, bot)
+      console.log(message)
       // 先执行非 delayed 规则
       for (const rule of rules.filter((r) => !r.delayed)) {
         try {
@@ -212,7 +232,7 @@ for (const [botName, config] of Object.entries(configs)) {
         } catch (e) {
           await telemetry('say.ts', 'recordSpam 失败', { error: stringify(e) })
         }
-        await sendMessageToCurrentChat(`\`filtered(${(new Date().getMilliseconds() + 10) % 30})\``, {
+        await sendMessageToCurrentChat(`\`此消息已被特征检查拦截。(特征码 ${(new Date().getMilliseconds() + 10) % 30})\``, {
           parse_mode: 'MarkdownV2'
         })
         return
