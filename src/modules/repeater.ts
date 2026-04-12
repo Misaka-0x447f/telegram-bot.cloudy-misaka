@@ -2,7 +2,7 @@ import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import { getUnixTimeStamp, rand, sha1, sleep } from '../utils/lang'
 import { Message } from 'telegram-typings'
 import persistConfig from '../utils/persistConfig'
-import { UnixTimeStamp } from '../utils/type'
+import { UnixTimeStampMilli } from "../utils/type";
 import { isNull, isUndefined } from 'lodash-es'
 
 type MessageHistory = { digest: string | null; from: string }
@@ -11,18 +11,34 @@ const messageCountStorage = {} as Record<number,
     {
       nonRepeatCounter: number
       messageHistory: Array<MessageHistory>
-      // eslint-disable-next-line no-unused-vars
       createMessageHistory: (el: MessageHistory) => void
+      lastUpdate: UnixTimeStampMilli
+      lastRepeatTime: UnixTimeStampMilli
     }>
 
-const lastRepeatTime: Record < number, UnixTimeStamp > = {}
+const TTL = 3600 * 1000
+
+const cleanStorage = () => {
+  const now = getUnixTimeStamp()
+  for (const chatId in messageCountStorage) {
+    if (now - messageCountStorage[chatId].lastUpdate > TTL) {
+      delete messageCountStorage[chatId]
+    }
+  }
+}
 
 const createChatHistoryIfNX = (chatId: number) => {
-  if (!isUndefined(messageCountStorage[chatId])) return
+  cleanStorage()
+  if (!isUndefined(messageCountStorage[chatId])) {
+    messageCountStorage[chatId].lastUpdate = getUnixTimeStamp()
+    return
+  }
   const history: MessageHistory[] = []
   messageCountStorage[chatId] = {
     nonRepeatCounter: Infinity,
     messageHistory: history,
+    lastUpdate: getUnixTimeStamp(),
+    lastRepeatTime: 0,
     createMessageHistory: (messageHistory) => {
       if (isNull(messageHistory.digest)) return
       history.unshift(messageHistory)
@@ -90,13 +106,13 @@ for (const [botName, _] of Object.entries(persistConfig.entries.repeater)) {
         hasDocument +
         forwardCounterBonusChance) *
       Math.min(
-        (getUnixTimeStamp() - (lastRepeatTime[currentChatId] || 0)) / 1800000,
+        (getUnixTimeStamp() - (messageCountStorage[currentChatId].lastRepeatTime || 0)) / 1800000,
         1
       )
     if (chance > rand(0, 100) || sameMessageCount === 1) {
       if (message) {
         messageCountStorage[currentChatId].nonRepeatCounter = 0
-        lastRepeatTime[currentChatId] = getUnixTimeStamp()
+        messageCountStorage[currentChatId].lastRepeatTime = getUnixTimeStamp()
         await sleep(rand(2000, 5000))
         // TODO: deprecated api
         await ctx.telegram.sendCopy(message.chat.id, message)

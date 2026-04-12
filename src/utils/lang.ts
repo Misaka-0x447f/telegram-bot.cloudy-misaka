@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { UnixTimeStampMilli } from "./type";
 
 export { default as stringify } from 'json-stringify-safe'
 
@@ -31,7 +32,7 @@ export const argsTypeValidation = (
 export const isNumeric = (n: any): n is string =>
   !isNaN(parseFloat(n)) && isFinite(n)
 
-export const getUnixTimeStamp = () => new Date().getTime()
+export const getUnixTimeStamp = (): UnixTimeStampMilli => new Date().getTime()
 
 export const sha1 = (text: string) => {
   const sha1tool = crypto.createHash('sha1')

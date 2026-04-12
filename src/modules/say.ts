@@ -44,6 +44,22 @@ type MatchRule = {
   delayed?: boolean
 }
 
+const textIncludesOnlyUrlOrMentionEntities = (text: string, entities: NonNullable<Message['entities']>) => {
+  const relevantEntities = entities
+    .filter((e) => ['url', 'mention'].includes(e.type))
+    .sort((a, b) => a.offset - b.offset)
+  if (relevantEntities.length === 0) return false
+
+  let cursor = 0
+  for (const entity of relevantEntities) {
+    const gap = text.slice(cursor, entity.offset)
+    if (gap.trim() !== '') return false
+    cursor = entity.offset + entity.length
+  }
+
+  return text.slice(cursor).trim() === ''
+}
+
 // 动态规则构建器：根据当前 message 和 bot 构建规则，test 内部返回权重
 const buildMatchRules = (message: Message, bot: BotType): MatchRule[] => {
   const rules: MatchRule[] = []
@@ -66,7 +82,20 @@ const buildMatchRules = (message: Message, bot: BotType): MatchRule[] => {
   // 3) entities: url/mention 数量累加
   rules.push({
     label: 'entities:url-or-mention',
-    test: async () => (message.entities || []).filter((e) => ['url', 'mention'].includes(e.type)).length
+    test: async () => {
+      const entities = (message.entities || []).filter((e) => ['url', 'mention'].includes(e.type))
+      if (entities.length === 0) return 0
+      const text = message.text || ''
+      const onlyLinksOrMentions = text !== '' && textIncludesOnlyUrlOrMentionEntities(text, message.entities || [])
+      const urlCount = entities.filter((e) => e.type === 'url').length
+      const mentionCount = entities.filter((e) => e.type === 'mention').length
+
+      if (onlyLinksOrMentions && urlCount > 0) {
+        return urlCount * 2 + mentionCount
+      }
+
+      return entities.length
+    }
   })
 
   // 4) caption_entities: 实体数量累加
