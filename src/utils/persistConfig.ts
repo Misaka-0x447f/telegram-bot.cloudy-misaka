@@ -9,6 +9,7 @@ import * as tt from 'telegraf/typings/telegram-types'
 import got from 'got'
 
 export type RegexString = string
+type EmptyConfig = Record<string, never>
 
 export type Actions = ((
   | {
@@ -36,76 +37,107 @@ export type ChatWorkerRule<ActionTypes extends string = 'actions'> = {
   dest?: number
 } & Record<ActionTypes, Actions>
 
-const data: {
-  value: {
-    insight: {
-      azureSecret: string
-      telegramSupervisor: number[]
-    }
-    tokenTelegram: Array<{ name: TelegramBotName; token: string }>
-    tokenDeepl: string
-    tokenBsky: {
-      service: string,
-      identifier: string,
-      password: string,
-    },
-    biliForwarding: Record<TelegramBotName, {
-      source: number
-      dest: number // 转发至
-      updateInterval: number
-    }>
-    // Available var: title, category, desc, lastOnline, liveMinutesUntilNow
-    biliLive: Record<
-      TelegramBotName,
-      ChatWorkerRule<
-        | 'onlineActions'
-        | 'offlineActions'
-        | 'categoryChangeActions'
-        | 'titleChangeActions'
-      >
-    >
-    chatBridge: Record<
-      TelegramBotName,
-      {
-        list: Array<{
-          from: number
-          to: number
-        }>
-      }
-    >
-    // Available var: content, url
-    bluesky: Record<TelegramBotName,
-      ChatWorkerRule<'newPostActions'> & {
-      superusers?: number[]
-    }>
-    fetchSticker: Record<TelegramBotName, {}>
-    fetchVideo: Record<TelegramBotName, {}>
-    galnet: Record<
-      TelegramBotName,
-      ChatWorkerRule & {
-      superusers?: number[]
-    }
-    >
-    getUserInfo: Record<TelegramBotName, {}>
-    ping: Record<TelegramBotName, Record<'actions', Actions>>
-    repeater: Record<TelegramBotName, {}>
-    say: Record<
-      TelegramBotName,
-      {
-        list: Array<{
-          name: string
-          id: number
-        }>
-        adminChatIds?: number[]
-        adminChatIdsCanReceiveReply?: true
-      }
-    >
-    start: Record<TelegramBotName, Record<'actions', Actions>>
-    killall: {
-      superusers?: number[]
-    }
+export type StatusWorkerRule<ActionTypes extends string> = {
+  dest?: number
+  pollingIntervalOnFailure: number
+  pollingIntervalOnSuccess: number
+} & Record<ActionTypes, Actions>
+
+export type OpenRouterMonitorRule = {
+  alertActions: Actions
+  balanceAlertThreshold?: number
+  dest?: number
+  pollingInterval: number
+  quotaRemainingPercentageAlertThreshold?: number
+  recoverActions?: Actions
+}
+
+type PersistConfigEntries = {
+  insight: {
+    azureSecret: string
+    telegramSupervisor: number[]
   }
-} = { value: {} as any }
+  openrouter: {
+    baseURL?: string
+    managementKey?: string
+    model: string
+    token: string
+  }
+  tokenTelegram: Array<{ name: TelegramBotName; token: string }>
+  tokenDeepl: string
+  tokenBsky: {
+    service: string,
+    identifier: string,
+    password: string,
+  },
+  biliForwarding: Record<TelegramBotName, {
+    source: number
+    dest: number // 转发至
+    updateInterval: number
+  }>
+  // Available var: title, category, desc, lastOnline, liveMinutesUntilNow
+  biliLive: Record<
+    TelegramBotName,
+    ChatWorkerRule<
+      | 'onlineActions'
+      | 'offlineActions'
+      | 'categoryChangeActions'
+      | 'titleChangeActions'
+    >
+  >
+  chatBridge: Record<
+    TelegramBotName,
+    {
+      list: Array<{
+        from: number
+        to: number
+      }>
+    }
+  >
+  // Available var: content, url
+  bluesky: Record<TelegramBotName,
+    ChatWorkerRule<'newPostActions'> & {
+    superusers?: number[]
+  }>
+  fetchSticker: Record<TelegramBotName, EmptyConfig>
+  fetchVideo: Record<TelegramBotName, EmptyConfig>
+  galnet: Record<
+    TelegramBotName,
+    ChatWorkerRule & {
+    superusers?: number[]
+  }
+  >
+  galnetStatus: Record<
+    TelegramBotName,
+    StatusWorkerRule<'outageActions' | 'recoverActions' | 'startupActions'>
+  >
+  openrouterMonitor: Record<
+    TelegramBotName,
+    OpenRouterMonitorRule
+  >
+  getUserInfo: Record<TelegramBotName, EmptyConfig>
+  ping: Record<TelegramBotName, Record<'actions', Actions>>
+  repeater: Record<TelegramBotName, EmptyConfig>
+  say: Record<
+    TelegramBotName,
+    {
+      list: Array<{
+        name: string
+        id: number
+      }>
+      adminChatIds?: number[]
+      adminChatIdsCanReceiveReply?: true
+    }
+  >
+  start: Record<TelegramBotName, Record<'actions', Actions>>
+  killall: {
+    superusers?: number[]
+  }
+}
+
+const data: {
+  value?: PersistConfigEntries
+} = {}
 
 export default {
   init: async () => {
@@ -123,6 +155,10 @@ export default {
     }
   },
   get entries () {
+    if (!data.value) {
+      throw new Error('persistConfig has not been initialized.')
+    }
+
     return data.value
   }
 }

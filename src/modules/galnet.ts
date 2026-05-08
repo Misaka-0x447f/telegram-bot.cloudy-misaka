@@ -6,7 +6,7 @@ import { fetchGalnet } from '../interface/galnet'
 import { HTTPError } from 'got'
 import telemetry from '../utils/telemetry'
 import { isNull, isString } from 'lodash-es'
-import { translateText } from '../interface/translate'
+import { translateGalnetArticle } from '../interface/translate'
 import errorMessages, { ParamsDefinition } from '../utils/errorMessages'
 import { argsTypeValidation, isNumeric, sleep } from '../utils/lang'
 import { telegramHTMLEscape } from '../utils/telegram'
@@ -25,6 +25,14 @@ const store: Partial<
 
 const historyGalnetNewsCountCommand = 'configure_history_galnet_count'
 
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return String(error)
+}
+
 for (const [botName, config] of Object.entries(configs)) {
   const bot = getTelegramBotByAnyBotName(botName)
   bot.command.sub(async ({ ctx, commandName, args }) => {
@@ -36,8 +44,9 @@ for (const [botName, config] of Object.entries(configs)) {
         }
       ]
     }
-    const chatId = ctx.chat?.id!
     if (commandName !== historyGalnetNewsCountCommand) return
+    const chatId = ctx.chat?.id
+    if (!chatId) return
     if (!config.superusers?.length) {
       bot.sendMessage(chatId, 'No superuser configured.').then()
       return
@@ -136,29 +145,24 @@ const worker = async (botName: string) => {
   for (const news of newsToSend) {
     let translateErrorString = ''
     const contentSlice = news.content!.split(/[\r\n]+/)
-    const contentTranslated: string[] = []
+    const translatedNews = await translateGalnetArticle(news.title!, contentSlice).catch((error) => {
+      translateErrorString = telegramHTMLEscape(getErrorMessage(error))
+      return null
+    })
     const titleTranslated = [
       news.title,
-      telegramHTMLEscape(await translateText(news.title!)
-        .then((res) => res?.map((el) => el.text).join('\n'))
-        .catch((e) => {
-          translateErrorString = telegramHTMLEscape(e.message)
-          return ''
-        }) || '')
+      telegramHTMLEscape(translatedNews?.title || '')
     ].join('\n')
-    // no need to multi-thread here.
-    for (const line of contentSlice) {
-      contentTranslated.push(
-        [
-          line,
-          (await translateText(line)
-            .then((res) => res?.map((el) => el.text).join('\n'))
-            .catch((e) => {
-              translateErrorString = e.message
-              return ''
-            })) || ''
-        ].join('\n')
-      )
+    const contentTranslated = contentSlice.map((line, index) => {
+      const translatedLine = translatedNews?.paragraphs[index] || ''
+
+      return [
+        line,
+        translatedLine
+      ].join('\n')
+    })
+    if (!translatedNews && !translateErrorString) {
+      translateErrorString = 'Galnet translation failed.'
     }
     if (translateErrorString) {
       await telemetry(
@@ -187,12 +191,15 @@ const worker = async (botName: string) => {
   }
 }
 
-const main = async (botName: string) => {
-  await worker(botName)
-  setTimeout(
-    () => main(botName),
-    configs[botName as TelegramBotName].updateInterval
-  )
+const run = (botName: string) => {
+  worker(botName)
+    .catch((...args) => telemetry('modules/galnet.ts/worker', ...args))
+    .finally(() => {
+      setTimeout(
+        () => run(botName),
+        configs[botName as TelegramBotName].updateInterval
+      )
+    })
 }
 
-Object.keys(configs).forEach((el) => main(el))
+Object.keys(configs).forEach((el) => run(el))
