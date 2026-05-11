@@ -81,6 +81,10 @@ const runStatusActions = async (
   current: ServerStatusSnapshot,
   previous?: ServerStatusSnapshot
 ) => {
+  if (!actions) {
+    return
+  }
+
   const bot = getTelegramBotByAnyBotName(botName)
   const config = configs[botName as TelegramBotName]
 

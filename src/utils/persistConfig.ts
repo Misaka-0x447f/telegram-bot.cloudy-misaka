@@ -41,7 +41,7 @@ export type StatusWorkerRule<ActionTypes extends string> = {
   dest?: number
   pollingIntervalOnFailure: number
   pollingIntervalOnSuccess: number
-} & Record<ActionTypes, Actions>
+} & Partial<Record<ActionTypes, Actions>>
 
 export type OpenRouterMonitorRule = {
   alertActions: Actions

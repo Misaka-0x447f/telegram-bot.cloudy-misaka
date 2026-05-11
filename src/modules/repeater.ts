@@ -17,6 +17,27 @@ const messageCountStorage = {} as Record<number,
     }>
 
 const TTL = 3600 * 1000
+const MAX_PASSIVE_REPEAT_TEXT_LENGTH = 5
+const passiveRepeatLengthBonus = [0, 0.08, 0.2, 0.8, 1.4, 2]
+const passiveRepeatBlockedLinkPattern = /(https?:\/\/|www\.|t\.me\/|telegram\.me\/)/i
+const passiveRepeatBlockedEntityTypes = ['mention', 'url', 'text_link', 'text_mention']
+
+const canPassivelyRepeatMessage = (message: Message) => {
+  const text = message.text || ''
+  const hasBlockedEntity = (message.entities || []).some((entity) =>
+    passiveRepeatBlockedEntityTypes.includes(entity.type)
+  )
+
+  return Boolean(text) &&
+    text.length <= MAX_PASSIVE_REPEAT_TEXT_LENGTH &&
+    !message.photo &&
+    !message.sticker &&
+    !message.document &&
+    !message.voice &&
+    !text.includes('@') &&
+    !passiveRepeatBlockedLinkPattern.test(text) &&
+    !hasBlockedEntity
+}
 
 const cleanStorage = () => {
   const now = getUnixTimeStamp()
@@ -86,30 +107,28 @@ for (const [botName, _] of Object.entries(persistConfig.entries.repeater)) {
         break
       }
     }
-    const messageLength = ctx.message?.text?.length || 0
-    const messageLengthBonusDef = [0, 100, 70, 40, 10, 4].map((el) => el * 0.02)
+    const messageText = ctx.message?.text || ''
+    const messageLength = messageText.length
+    const canPassivelyRepeat = canPassivelyRepeatMessage(message)
     const messageLengthBonus =
-      messageLength >= messageLengthBonusDef.length
-        ? -100
-        : messageLengthBonusDef[messageLength] || 0
-    const hasPhoto = ctx.message?.photo ? -Infinity : 0
-    const hasSticker = ctx.message?.sticker ? -Infinity : 0
-    const hasDocument = ctx.message?.document ? -Infinity : 0
+      canPassivelyRepeat
+        ? passiveRepeatLengthBonus[messageLength] || 0
+        : -Infinity
     const forwardCounterBonus = [2, 1.5, 0.9, 0.4, 0]
     const forwardCounterBonusChance =
-      (5 - messageLength) *
-      (forwardCounterBonus[messageCountStorage[currentChatId].nonRepeatCounter] || 0)
+      canPassivelyRepeat
+        ? messageLength *
+          (forwardCounterBonus[messageCountStorage[currentChatId].nonRepeatCounter] || 0)
+        : -Infinity
     const chance =
       (messageLengthBonus +
-        hasPhoto +
-        hasSticker +
-        hasDocument +
         forwardCounterBonusChance) *
       Math.min(
         (getUnixTimeStamp() - (messageCountStorage[currentChatId].lastRepeatTime || 0)) / 1800000,
         1
       )
-    if (chance > rand(0, 100) || sameMessageCount === 1) {
+    const shouldRepeatSameMessage = canPassivelyRepeat && sameMessageCount === 1
+    if (chance > rand(0, 100) || shouldRepeatSameMessage) {
       if (message) {
         messageCountStorage[currentChatId].nonRepeatCounter = 0
         messageCountStorage[currentChatId].lastRepeatTime = getUnixTimeStamp()
@@ -130,7 +149,7 @@ for (const [botName, _] of Object.entries(persistConfig.entries.repeater)) {
   bot.message.sub(async ({ ctx, message, currentChat }) => {
     const targetMessage = message?.reply_to_message
     const chatId = currentChat?.id
-    if (!(targetMessage && message?.text?.match(/复读/))) return
+    if (!(targetMessage && message?.text === '复读')) return
     if (!chatId) return
     if (!targetMessage) {
       await ctx.telegram.sendMessage(chatId, '目标消息被吃掉啦')
