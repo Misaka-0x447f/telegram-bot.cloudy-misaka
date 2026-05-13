@@ -109,7 +109,13 @@ type PersistConfigEntries = {
   >
   galnetStatus: Record<
     TelegramBotName,
-    StatusWorkerRule<'outageActions' | 'recoverActions' | 'startupActions'>
+    StatusWorkerRule<
+      'outageActions' |
+      'recoverActions' |
+      'startupActions' |
+      'non200Actions' |
+      'non200RecoverActions'
+    >
   >
   openrouterMonitor: Record<
     TelegramBotName,

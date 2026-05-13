@@ -17,7 +17,7 @@ const escapeRegExp = (value: string) =>
 const hasTerm = (source: string, candidate: string) =>
   new RegExp(`(^|[^A-Za-z])${escapeRegExp(candidate)}([^A-Za-z]|$)`, 'i').test(source)
 
-const matchGlossaryEntries = (source: string) =>
+export const matchGlossaryEntries = (source: string) =>
   galnetGlossary
     .filter((entry) =>
       [entry.term].concat(entry.aliases || []).some((candidate) => hasTerm(source, candidate))

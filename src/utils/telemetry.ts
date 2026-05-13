@@ -6,8 +6,17 @@ import persistConfig from './persistConfig'
 import fsj from 'fs-jetpack'
 
 export let insights: ApplicationInsights
+let isSilent = false
+
+export const setTelemetrySilent = (value: boolean) => {
+  isSilent = value
+}
 
 export const telemetryInit = () => {
+  if (isSilent) {
+    return
+  }
+
   insights = new ApplicationInsights({
     config: {
       instrumentationKey: persistConfig.entries.insight.azureSecret
@@ -29,6 +38,10 @@ const sendReport = async (text?: string) => {
 }
 
 export default async (label: string, ...log: any[]) => {
+  if (isSilent) {
+    return
+  }
+
   console.error(...log)
   let res = ''
   log.forEach((el) => {

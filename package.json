@@ -4,7 +4,7 @@
   "description": "",
   "//": "这个项目有配 ci，请通过 ci 部署",
   "scripts": {
-    "start": "rollup -c && node ./dist/index.js --enable-source-maps",
+    "start": "rollup -c && node --enable-source-maps ./dist/index.js",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch",
     "lint": "eslint --fix ./src/**/*.ts",
