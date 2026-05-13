@@ -1,4 +1,4 @@
-// eslint-disable-next-line no-unused-vars
+ 
 type cb<T> = (payload: T) => void
 
 export default <T = void>() => {

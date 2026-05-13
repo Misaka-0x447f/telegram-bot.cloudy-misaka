@@ -144,7 +144,7 @@ const botFactory = (el: typeof bots[0]) => {
       actions: Actions,
       options: {
         defaultChatId: number
-        // eslint-disable-next-line no-unused-vars
+         
         filterMethod?: (text: string, filterText: RegexString) => boolean
       },
       params: Record<string, string | number | undefined> = {}

@@ -20,7 +20,7 @@ export const fetchGalnet = async () => {
       data: Array<{
         id: UUID,
         attributes: {
-          /* eslint-disable camelcase */
+           
           revision_timestamp: DateTimeString,
           title: string,
           created: DateTimeString,
@@ -38,7 +38,7 @@ export const fetchGalnet = async () => {
           field_galnet_guid: string,
           field_galnet_image: string,
           field_slug: string,
-          /* eslint-enable camelcase */
+           
         }
       }>
     }>()

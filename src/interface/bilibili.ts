@@ -1,4 +1,4 @@
-/* eslint-disable camelcase */
+ 
 import got from 'got'
 import mem from 'mem'
 import { bilibiliRequestParamSigning, getBiliTicket } from '../utils/signing/bilibili'

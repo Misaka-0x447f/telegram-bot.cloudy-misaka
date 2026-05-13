@@ -1,4 +1,4 @@
-/* eslint-disable camelcase */
+ 
 import got from 'got'
 import telemetry from '../utils/telemetry'
 
