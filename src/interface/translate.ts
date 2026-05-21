@@ -96,6 +96,7 @@ export const translateGalnetArticle = async (
     'Apply the glossary strictly when a matching term appears.',
     'For entries marked first_mention_bilingual, keep the preferredZh wording on first mention.',
     'If the source contains HTML fragments, preserve their meaning without adding new tags.',
+    'When an English proper noun is adjacent to Chinese text, insert a space between them.',
     '',
     'Glossary:',
     glossaryText
