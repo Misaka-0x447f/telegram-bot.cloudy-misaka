@@ -2,7 +2,7 @@ import { asNonNullable, TelegramBotName } from '../utils/type'
 
 import persistConfig, { Actions } from '../utils/persistConfig'
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
-import { fetchGalnet } from '../interface/galnet'
+import { fetchGalnet, fetchGalnetBySlug, GalnetNews } from '../interface/galnet'
 import { HTTPError } from 'got'
 import telemetry from '../utils/telemetry'
 import { isNull, isString } from 'lodash-es'
@@ -25,7 +25,8 @@ const store: Partial<
 > = {}
 
 const historyGalnetNewsCountCommand = 'configure_history_galnet_count'
-const translateRetrySchedule = [2000, 4000, 8000, 16000, 32000, 60000]
+const translateGalnetCommand = 'translate_galnet'
+const translateRetrySchedule = [2000, 4000, 8000]
 
 type GalnetTranslation = Awaited<ReturnType<typeof translateGalnetArticle>>
 
@@ -104,6 +105,7 @@ const isRetriableTranslateError = (error: unknown) => {
     'fetch failed',
     'internal server error',
     'network',
+    'paragraph count mismatch',
     'socket',
     'timed out',
     'timeout'
@@ -153,6 +155,87 @@ const translateGalnetArticleWithRetry = async (
     finalError?: unknown
     retryScheduleUsed: number[]
     translatedNews: null
+  }
+}
+
+const extractGalnetSlug = (raw: string): string | null => {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+
+  try {
+    const parsed = new URL(trimmed)
+    const segments = parsed.pathname.split('/').filter(Boolean)
+    const slug = segments[segments.length - 1]
+    return slug || null
+  } catch {
+    const segments = trimmed.split('/').filter(Boolean)
+    const slug = segments[segments.length - 1]
+    return slug || null
+  }
+}
+
+const processGalnetNews = async (botName: string, news: GalnetNews) => {
+  const bot = getTelegramBotByAnyBotName(botName)
+  const config = configs[botName as TelegramBotName]
+
+  let translateErrorString = ''
+  const contentSlice = splitGalnetContent(news.content)
+  const translationAttempt = await translateGalnetArticleWithRetry(news.title, contentSlice)
+  const translatedNews = translationAttempt.translatedNews
+  let diagnosticText = ''
+
+  if (!translatedNews) {
+    const finalError = translationAttempt.finalError
+    translateErrorString = telegramHTMLEscape(
+      finalError ? getErrorMessage(finalError) : 'Galnet translation failed.'
+    )
+    diagnosticText = buildTranslationDiagnostic(
+      persistConfig.entries.openrouter.model,
+      translationAttempt.attempts,
+      translationAttempt.retryScheduleUsed,
+      news.url,
+      finalError
+    )
+  }
+
+  const titleTranslated = [
+    news.title,
+    telegramHTMLEscape(translatedNews?.title || '')
+  ].join('\n')
+  const contentTranslated = contentSlice.map((line, index) => {
+    const translatedLine = translatedNews?.paragraphs[index] || ''
+
+    return [
+      line,
+      translatedLine
+    ].join('\n')
+  })
+  if (!translatedNews && !translateErrorString) {
+    translateErrorString = 'Galnet translation failed.'
+  }
+  if (diagnosticText) {
+    await telemetry(
+      `modules/galnet.ts/processGalnetNews`,
+      diagnosticText)
+  }
+
+  const params: Record<string, string | number | undefined> = {}
+  for (const [key, value] of Object.entries(news)) {
+    params[key] = isString(value) ? telegramHTMLEscape(value) : value
+  }
+
+  await bot.runActions(
+    config.actions,
+    { defaultChatId: 0 },
+    {
+      ...params,
+      titleTranslated,
+      contentTranslated: telegramHTMLEscape(contentTranslated.join('\n\n')),
+      translateErrorString
+    }
+  )
+  if (diagnosticText) {
+    await sendTranslationDiagnostic(botName, config.actions, diagnosticText)
   }
 }
 
@@ -276,11 +359,64 @@ for (const [botName, config] of Object.entries(configs)) {
     }
     await bot.sendMessage(chatId, 'Success.')
   })
+
+  bot.command.sub(async ({ ctx, commandName, args }) => {
+    if (commandName !== translateGalnetCommand) return
+    const chatId = ctx.chat?.id
+    if (!chatId) return
+    if (ctx.chat?.type !== 'private') {
+      bot.sendMessage(chatId, 'This command is private-chat only.').then()
+      return
+    }
+    if (!config.superusers?.length) {
+      bot.sendMessage(chatId, 'No superuser configured.').then()
+      return
+    }
+    if (!config.superusers.includes(chatId)) {
+      bot.sendMessage(chatId, 'You are not in the sudoers file. This incident will be reported.').then()
+      return
+    }
+    const rawArg = args.filter((value) => value.length > 0).join(' ').trim()
+    if (!rawArg) {
+      bot.sendMessage(chatId, `Usage: /${translateGalnetCommand} <galnet-article-url>`).then()
+      return
+    }
+    const slug = extractGalnetSlug(rawArg)
+    if (!slug) {
+      bot.sendMessage(chatId, `Could not extract slug from URL: ${rawArg}`).then()
+      return
+    }
+
+    let news: GalnetNews | null
+    try {
+      news = await fetchGalnetBySlug(slug)
+    } catch (error) {
+      await telemetry(
+        'modules/galnet.ts/translateGalnetCommand',
+        `Failed to fetch galnet article by slug ${slug}: ${getErrorMessage(error)}`)
+      bot.sendMessage(chatId, `Failed to fetch article: ${getErrorMessage(error)}`).then()
+      return
+    }
+    if (!news) {
+      bot.sendMessage(chatId, `Article not found for slug: ${slug}`).then()
+      return
+    }
+
+    await bot.sendMessage(chatId, `Translating ${news.url} ...`)
+    try {
+      await processGalnetNews(botName, news)
+    } catch (error) {
+      await telemetry(
+        'modules/galnet.ts/translateGalnetCommand',
+        `Failed to process galnet article ${news.url}: ${getErrorMessage(error)}`)
+      bot.sendMessage(chatId, `Failed to process article: ${getErrorMessage(error)}`).then()
+      return
+    }
+    await bot.sendMessage(chatId, 'Done.')
+  })
 }
 
 const worker = async (botName: string) => {
-  const bot = getTelegramBotByAnyBotName(botName)
-  const config = configs[botName as TelegramBotName]
   const recentGalnetNewsFromServer = await fetchGalnet().catch(
     (err: HTTPError) => {
       telemetry(
@@ -324,66 +460,7 @@ const worker = async (botName: string) => {
   if (!newsToSend.length) return
 
   for (const news of newsToSend) {
-    let translateErrorString = ''
-    const contentSlice = splitGalnetContent(news.content!)
-    const translationAttempt = await translateGalnetArticleWithRetry(news.title!, contentSlice)
-    const translatedNews = translationAttempt.translatedNews
-    let diagnosticText = ''
-
-    if (!translatedNews) {
-      const finalError = translationAttempt.finalError
-      translateErrorString = telegramHTMLEscape(
-        finalError ? getErrorMessage(finalError) : 'Galnet translation failed.'
-      )
-      diagnosticText = buildTranslationDiagnostic(
-        persistConfig.entries.openrouter.model,
-        translationAttempt.attempts,
-        translationAttempt.retryScheduleUsed,
-        news.url!,
-        finalError
-      )
-    }
-
-    const titleTranslated = [
-      news.title,
-      telegramHTMLEscape(translatedNews?.title || '')
-    ].join('\n')
-    const contentTranslated = contentSlice.map((line, index) => {
-      const translatedLine = translatedNews?.paragraphs[index] || ''
-
-      return [
-        line,
-        translatedLine
-      ].join('\n')
-    })
-    if (!translatedNews && !translateErrorString) {
-      translateErrorString = 'Galnet translation failed.'
-    }
-    if (diagnosticText) {
-      await telemetry(
-        `modules/galnet.ts/worker`,
-        diagnosticText)
-    }
-    const params = news
-    for (const [i, v] of Object.entries(params)) {
-      if (isString(v)) {
-        // @ts-expect-error key type problem
-        params[i] = telegramHTMLEscape(v!)
-      }
-    }
-    await bot.runActions(
-      config.actions,
-      { defaultChatId: 0 },
-      {
-        ...params,
-        titleTranslated,
-        contentTranslated: telegramHTMLEscape(contentTranslated.join('\n\n')),
-        translateErrorString
-      }
-    )
-    if (diagnosticText) {
-      await sendTranslationDiagnostic(botName, config.actions, diagnosticText)
-    }
+    await processGalnetNews(botName, news)
     await sleep(15000)
     currentStore.startFrom = news.timestamp
   }
