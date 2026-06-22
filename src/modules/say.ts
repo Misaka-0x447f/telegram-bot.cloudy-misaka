@@ -73,6 +73,31 @@ const buildMatchRules = (message: Message, bot: BotType): MatchRule[] => {
     }
   })
 
+  // 1b) 仅私聊生效的关键词（群聊里这些词可能是正常讨论，不计分以免误伤）
+  rules.push({
+    label: 'privateOnlyKeywords',
+    test: async () => {
+      if (message.chat.type !== 'private') return 0
+      const textToCheck = `${message.text || ''} ${message.caption || ''}`
+      const privatePatterns = [/VPN/i, /挂机/]
+      return privatePatterns.reduce((acc, re) => acc + (re.test(textToCheck) ? 1 : 0), 0)
+    }
+  })
+
+  // 1c) 私聊场景下，含 URL / mention / text_link 立刻 +2（达阈直接拦截）
+  rules.push({
+    label: 'privateUrlOrMention',
+    test: async () => {
+      if (message.chat.type !== 'private') return 0
+      const allEntities = [
+        ...(message.entities || []),
+        ...(message.caption_entities || [])
+      ]
+      const hit = allEntities.some((e) => ['url', 'mention', 'text_link'].includes(e.type))
+      return hit ? 2 : 0
+    }
+  })
+
   // 2) 存在 inline keyboard
   rules.push({
     label: 'inlineKeyboard',
@@ -138,13 +163,7 @@ const buildMatchRules = (message: Message, bot: BotType): MatchRule[] => {
     }
   });
 
-  // 8) 精确匹配 "/start" 命令 +1
-  rules.push({
-    label: "exactStartCommand",
-    test: async () => (message.text === "/start" ? 1 : 0)
-  });
-
-  // 9) 延迟规则：用户头像为 0 则 +1（异常上报 telemetry）
+  // 8) 延迟规则：用户头像为 0 则 +1（异常上报 telemetry）
   rules.push({
     label: 'noProfilePhoto',
     delayed: true,
@@ -205,6 +224,8 @@ for (const [botName, config] of Object.entries(configs)) {
       )
       return
     }
+    // 裸 /start 既不转发也不计为垃圾，直接静默忽略
+    if (message.text === '/start') return
     if (
       (message.reply_to_message &&
         message.reply_to_message?.from?.username === bot.username) ||
