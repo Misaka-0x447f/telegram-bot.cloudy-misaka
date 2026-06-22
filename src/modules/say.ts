@@ -202,6 +202,8 @@ for (const [botName, config] of Object.entries(configs)) {
   const bot = getTelegramBotByAnyBotName(botName)
   bot.message.sub(async ({ sendMessageToCurrentChat, ctx, message, currentChat, currentChatId }) => {
     const isPrivate = message.chat.type === 'private'
+    // 私聊转发功能已完全关闭：不转发、不回复、不做特征检查，直接静默忽略。
+    if (isPrivate) return
     if (!config.adminChatIdsCanReceiveReply) return
     const parseResult = tryCatchReturn<ChatInfoParseResult | null>(
       () =>
