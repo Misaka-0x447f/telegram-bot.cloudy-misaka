@@ -16,6 +16,12 @@ const QUARTER_HOUR_MS = 15 * 60 * 1000
 const TIMESTAMP_HISTORY_KEEP = 10
 const USER_STATE_STALE_MS = 6 * 60 * 60 * 1000
 const USER_STATE_PRUNE_THRESHOLD = 1000
+// Cap decoded pixel count to bound sharp's memory. 100M pixels covers up to
+// roughly 10000x10000 images, above what any legitimate reply would need,
+// while stopping decompression-bomb payloads whose compressed size is small
+// but whose decoded dimensions are huge.
+const SHARP_INPUT_PIXEL_LIMIT = 100_000_000
+const TASK_TIMEOUT_MS = 60 * 1000
 
 const OUTPUT_FORMAT_MAP: Record<string, keyof sharp.FormatEnum> = {
   jpg: 'jpeg',
@@ -238,41 +244,68 @@ const createWorker = (worker: BotType) => {
     state.quota -= 1
 
     let conversionSucceeded = false
+    let timedOut = false
+    let timeoutHandle: NodeJS.Timeout | undefined
     try {
-      const fileLink = await worker.instance.telegram.getFileLink(
-        source.fileId
-      )
-      const stream = downloadStream(fileLink)
-      const inputBuffer = await collectStreamToBuffer(stream, MAX_FILE_SIZE)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(() => {
+          timedOut = true
+          reject(
+            new Error(
+              `任务超时（${TASK_TIMEOUT_MS / 1000} 秒内未完成），本次仍会消耗额度。`
+            )
+          )
+        }, TASK_TIMEOUT_MS)
+      })
+      await Promise.race([
+        (async () => {
+          const fileLink = await worker.instance.telegram.getFileLink(
+            source.fileId
+          )
+          const stream = downloadStream(fileLink)
+          const inputBuffer = await collectStreamToBuffer(
+            stream,
+            MAX_FILE_SIZE
+          )
 
-      worker.instance.telegram
-        .sendChatAction(currentChatId, 'upload_document')
-        .catch(() => {})
+          worker.instance.telegram
+            .sendChatAction(currentChatId, 'upload_document')
+            .catch(() => {})
 
-      const outputBuffer = await sharp(inputBuffer, { animated: true })
-        .toFormat(sharpFormat)
-        .toBuffer()
+          const outputBuffer = await sharp(inputBuffer, {
+            animated: true,
+            limitInputPixels: SHARP_INPUT_PIXEL_LIMIT
+          })
+            .toFormat(sharpFormat)
+            .toBuffer()
 
-      await worker.instance.telegram.sendDocument(
-        currentChatId,
-        {
-          source: outputBuffer,
-          filename: `converted.${targetFormat}`
-        } as unknown as Parameters<
-          typeof worker.instance.telegram.sendDocument
-        >[1],
-        {
-          reply_to_message_id: ctx.message?.message_id
-        }
-      )
+          await worker.instance.telegram.sendDocument(
+            currentChatId,
+            {
+              source: outputBuffer,
+              filename: `converted.${targetFormat}`
+            } as unknown as Parameters<
+              typeof worker.instance.telegram.sendDocument
+            >[1],
+            {
+              reply_to_message_id: ctx.message?.message_id
+            }
+          )
+        })(),
+        timeoutPromise
+      ])
       conversionSucceeded = true
     } catch (e) {
-      state.quota = Math.min(MAX_QUOTA, state.quota + 1)
+      if (!timedOut) {
+        state.quota = Math.min(MAX_QUOTA, state.quota + 1)
+      }
       const msg = e instanceof Error ? e.message : String(e)
       await sendMessageToCurrentChat(`转换失败：${msg}`)
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle)
     }
 
-    if (conversionSucceeded) {
+    if (conversionSucceeded || timedOut) {
       const nextBoundary =
         getPrevQuarterHourBoundary(Date.now()) + QUARTER_HOUR_MS
       try {

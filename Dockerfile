@@ -10,6 +10,10 @@ WORKDIR ./misaka-app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
+# Fail the build if sharp's native binary isn't loadable in this image
+# (rather than only finding out at first request time).
+RUN node -e "require('sharp')"
+
 # Bundle APP files
 COPY ./dist ./
 
