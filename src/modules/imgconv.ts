@@ -148,7 +148,6 @@ const collectStreamToBuffer = (
 const createWorker = (worker: BotType) => {
   worker.command.sub(async (p) => {
     const {
-      ctx,
       args,
       commandName,
       currentChatId,
@@ -288,7 +287,7 @@ const createWorker = (worker: BotType) => {
               typeof worker.instance.telegram.sendDocument
             >[1],
             {
-              reply_to_message_id: ctx.message?.message_id
+              reply_to_message_id: message.message_id
             }
           )
         })(),
