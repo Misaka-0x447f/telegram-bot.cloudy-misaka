@@ -107,7 +107,7 @@ const detectSourceFile = (msg: Message | undefined): SourceFile | null => {
   if (!msg) return null
   if (msg.document) {
     const mime = msg.document.mime_type || ''
-    if (mime && !mime.startsWith('image/')) return null
+    if (!mime.startsWith('image/')) return null
     return { fileId: msg.document.file_id, fileSize: msg.document.file_size }
   }
   if (msg.photo && msg.photo.length > 0) {
@@ -152,7 +152,12 @@ const createWorker = (worker: BotType) => {
     if (commandName !== 'imgconv') return
 
     const userId = message.from?.id
-    if (!userId) return
+    if (!userId) {
+      await sendMessageToCurrentChat(
+        '无法识别发送者身份，该命令在频道消息或匿名管理员场景下不可用。'
+      )
+      return
+    }
 
     const rawArg = (args[0] || '').trim()
     if (!rawArg) {
