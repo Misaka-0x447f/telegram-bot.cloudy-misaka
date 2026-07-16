@@ -234,10 +234,11 @@ const createWorker = (worker: BotType) => {
     }
     const detection = detectSourceFile(reply)
     if (!detection.ok) {
+      const replyHelpMessage = errorMessages
+        .illegalReplyMessage(paramDefinition)
+        .replace(/^不合法的回复消息。\n/u, '')
       await sendMessageToCurrentChat(
-        `不合法的回复消息：${detection.reason}。\n${errorMessages.illegalReplyMessage(
-          paramDefinition
-        )}`
+        `不合法的回复消息：${detection.reason}。\n${replyHelpMessage}`
       )
       return
     }
