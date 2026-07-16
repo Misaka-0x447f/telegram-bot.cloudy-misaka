@@ -24,7 +24,9 @@ export default {
   ],
   // Specify here external modules which you don't want to include in your bundle (for instance: 'lodash', 'moment' etc.)
   // https://rollupjs.org/guide/en/#external
-  external: [],
+  // sharp ships platform-specific native binaries via @img/sharp-* optional deps
+  // that rollup cannot bundle. Keep it external and install prod deps in Docker.
+  external: [/^sharp(\/|$)/, /^@img\//],
 
   plugins: [
     replace({
