@@ -109,20 +109,57 @@ type SourceFile = {
   fileSize?: number
 }
 
-const detectSourceFile = (msg: Message | undefined): SourceFile | null => {
-  if (!msg) return null
-  if (msg.document) {
-    const mime = msg.document.mime_type || ''
-    if (!mime.startsWith('image/')) return null
-    return { fileId: msg.document.file_id, fileSize: msg.document.file_size }
-  }
+type DetectResult =
+  | { ok: true; file: SourceFile }
+  | { ok: false; reason: string }
+
+const detectSourceFile = (msg: Message | undefined): DetectResult => {
+  if (!msg) return { ok: false, reason: '未回复任何消息' }
   if (msg.photo && msg.photo.length > 0) {
     const largest = msg.photo.reduce((max, p) =>
       (p.file_size || 0) > (max.file_size || 0) ? p : max
     )
-    return { fileId: largest.file_id, fileSize: largest.file_size }
+    return {
+      ok: true,
+      file: { fileId: largest.file_id, fileSize: largest.file_size }
+    }
   }
-  return null
+  if (msg.document) {
+    const mime = msg.document.mime_type || ''
+    if (!mime) {
+      return {
+        ok: false,
+        reason: '被回复的文件没有 mime_type，无法确认是否是图片'
+      }
+    }
+    if (!mime.startsWith('image/')) {
+      return {
+        ok: false,
+        reason: `被回复的文件是 ${mime} 类型，需要 image/* 类型`
+      }
+    }
+    return {
+      ok: true,
+      file: { fileId: msg.document.file_id, fileSize: msg.document.file_size }
+    }
+  }
+  if (msg.animation) {
+    return {
+      ok: false,
+      reason: '被回复的是动图（Telegram 内部是 MP4），当前不支持'
+    }
+  }
+  if (msg.video) return { ok: false, reason: '被回复的是视频，当前不支持' }
+  if (msg.video_note) {
+    return { ok: false, reason: '被回复的是圆形视频消息，当前不支持' }
+  }
+  if (msg.sticker) return { ok: false, reason: '被回复的是贴纸，当前不支持' }
+  if (msg.voice) return { ok: false, reason: '被回复的是语音消息' }
+  if (msg.audio) return { ok: false, reason: '被回复的是音频文件' }
+  if (msg.text) {
+    return { ok: false, reason: '被回复的是纯文本消息，没有图片或图片文件' }
+  }
+  return { ok: false, reason: '被回复的消息里没有找到可转换的图片或图片文件' }
 }
 
 const collectStreamToBuffer = (
@@ -195,13 +232,16 @@ const createWorker = (worker: BotType) => {
       )
       return
     }
-    const source = detectSourceFile(reply)
-    if (!source) {
+    const detection = detectSourceFile(reply)
+    if (!detection.ok) {
       await sendMessageToCurrentChat(
-        errorMessages.illegalReplyMessage(paramDefinition)
+        `不合法的回复消息：${detection.reason}。\n${errorMessages.illegalReplyMessage(
+          paramDefinition
+        )}`
       )
       return
     }
+    const source = detection.file
     if (source.fileSize && source.fileSize > MAX_FILE_SIZE) {
       await sendMessageToCurrentChat(
         `文件过大：${(source.fileSize / 1024 / 1024).toFixed(1)}M，超过上限 30M。`
