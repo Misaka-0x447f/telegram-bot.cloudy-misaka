@@ -232,6 +232,7 @@ const createWorker = (worker: BotType) => {
 
     state.quota -= 1
 
+    let conversionSucceeded = false
     try {
       const fileLink = await worker.instance.telegram.getFileLink(
         source.fileId
@@ -259,18 +260,25 @@ const createWorker = (worker: BotType) => {
           reply_to_message_id: ctx.message?.message_id
         }
       )
-
-      const nextBoundary =
-        getPrevQuarterHourBoundary(Date.now()) + QUARTER_HOUR_MS
-      await sendMessageToCurrentChat(
-        `当前转换额度 ${state.quota}/${MAX_QUOTA}，下次恢复于 ${formatHHMM(
-          nextBoundary
-        )}。`
-      )
+      conversionSucceeded = true
     } catch (e) {
       state.quota = Math.min(MAX_QUOTA, state.quota + 1)
       const msg = e instanceof Error ? e.message : String(e)
       await sendMessageToCurrentChat(`转换失败：${msg}`)
+    }
+
+    if (conversionSucceeded) {
+      const nextBoundary =
+        getPrevQuarterHourBoundary(Date.now()) + QUARTER_HOUR_MS
+      try {
+        await sendMessageToCurrentChat(
+          `当前转换额度 ${state.quota}/${MAX_QUOTA}，下次恢复于 ${formatHHMM(
+            nextBoundary
+          )}。`
+        )
+      } catch (e) {
+        console.warn('imgconv: failed to send quota status message', e)
+      }
     }
   })
 }
