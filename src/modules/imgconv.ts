@@ -14,6 +14,8 @@ const MAX_FILE_SIZE = 30 * 1024 * 1024
 const MAX_FORMAT_NAME_LENGTH = 10
 const QUARTER_HOUR_MS = 15 * 60 * 1000
 const TIMESTAMP_HISTORY_KEEP = 10
+const USER_STATE_STALE_MS = 6 * 60 * 60 * 1000
+const USER_STATE_PRUNE_THRESHOLD = 1000
 
 const OUTPUT_FORMAT_MAP: Record<string, keyof sharp.FormatEnum> = {
   jpg: 'jpeg',
@@ -42,9 +44,18 @@ type UserState = {
   requestTimestamps: number[]
   quota: number
   lastRefillCheckpoint: number
+  lastSeen: number
 }
 
 const userState = new Map<number, UserState>()
+
+const pruneStaleUserState = (now: number) => {
+  if (userState.size <= USER_STATE_PRUNE_THRESHOLD) return
+  const cutoff = now - USER_STATE_STALE_MS
+  for (const [id, s] of userState) {
+    if (s.lastSeen < cutoff) userState.delete(id)
+  }
+}
 
 const getPrevQuarterHourBoundary = (t: number) => {
   const d = new Date(t)
@@ -62,17 +73,20 @@ const formatHHMM = (t: number) => {
 }
 
 const ensureState = (userId: number): UserState => {
-  let s = userState.get(userId)
   const now = Date.now()
+  pruneStaleUserState(now)
+  let s = userState.get(userId)
   if (!s) {
     s = {
       requestTimestamps: [],
       quota: MAX_QUOTA,
-      lastRefillCheckpoint: getPrevQuarterHourBoundary(now)
+      lastRefillCheckpoint: getPrevQuarterHourBoundary(now),
+      lastSeen: now
     }
     userState.set(userId, s)
     return s
   }
+  s.lastSeen = now
   const currentBoundary = getPrevQuarterHourBoundary(now)
   if (currentBoundary > s.lastRefillCheckpoint) {
     const boundariesPassed = Math.floor(
@@ -216,6 +230,8 @@ const createWorker = (worker: BotType) => {
       )
     }
 
+    state.quota -= 1
+
     try {
       const fileLink = await worker.instance.telegram.getFileLink(
         source.fileId
@@ -244,7 +260,6 @@ const createWorker = (worker: BotType) => {
         }
       )
 
-      state.quota -= 1
       const nextBoundary =
         getPrevQuarterHourBoundary(Date.now()) + QUARTER_HOUR_MS
       await sendMessageToCurrentChat(
@@ -253,6 +268,7 @@ const createWorker = (worker: BotType) => {
         )}。`
       )
     } catch (e) {
+      state.quota = Math.min(MAX_QUOTA, state.quota + 1)
       const msg = e instanceof Error ? e.message : String(e)
       await sendMessageToCurrentChat(`转换失败：${msg}`)
     }
