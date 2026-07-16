@@ -236,7 +236,9 @@ const createWorker = (worker: BotType) => {
     if (!detection.ok) {
       const replyHelpMessage = errorMessages
         .illegalReplyMessage(paramDefinition)
-        .replace(/^不合法的回复消息。\n/u, '')
+        .split('\n')
+        .slice(1)
+        .join('\n')
       await sendMessageToCurrentChat(
         `不合法的回复消息：${detection.reason}。\n${replyHelpMessage}`
       )
