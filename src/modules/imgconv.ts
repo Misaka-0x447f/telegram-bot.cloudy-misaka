@@ -1,3 +1,8 @@
+import crypto from 'crypto'
+import execa from 'execa'
+import { promises as fs } from 'fs'
+import os from 'os'
+import path from 'path'
 import sharp from 'sharp'
 import { Message } from 'telegram-typings'
 import {
@@ -13,7 +18,8 @@ import { downloadStream } from '../utils/file'
 
 const SHORT_COOLDOWN_MS = 30 * 1000
 const MAX_QUOTA = 5
-const MAX_FILE_SIZE = 30 * 1024 * 1024
+const MAX_IMAGE_INPUT_SIZE = 30 * 1024 * 1024
+const MAX_VIDEO_INPUT_SIZE = 1 * 1024 * 1024
 const MAX_FORMAT_NAME_LENGTH = 10
 const QUARTER_HOUR_MS = 15 * 60 * 1000
 const TIMESTAMP_HISTORY_KEEP = 10
@@ -43,10 +49,13 @@ const paramDefinition: ParamsDefinition = {
   argumentList: [
     {
       name: 'format',
-      acceptable: `目标格式。支持：${SUPPORTED_FORMATS.join(', ')}。`
+      acceptable:
+        `目标格式。图片输入支持：${SUPPORTED_FORMATS.join(', ')}；` +
+        '视频/动图/视频贴纸输入仅支持 gif。'
     }
   ],
-  replyMessageType: '待转换的图片（作为文件或普通图片发送）。'
+  replyMessageType:
+    '待转换的图片或视频（图片作为文件/普通图片，视频作为视频/动图/视频贴纸/document）。'
 }
 
 type UserState = {
@@ -107,9 +116,12 @@ const ensureState = (userId: number): UserState => {
   return s
 }
 
+type SourceKind = 'image' | 'video'
 type SourceFile = {
   fileId: string
   fileSize?: number
+  kind: SourceKind
+  mimeType?: string
 }
 
 type DetectResult =
@@ -124,45 +136,159 @@ const detectSourceFile = (msg: Message | undefined): DetectResult => {
     )
     return {
       ok: true,
-      file: { fileId: largest.file_id, fileSize: largest.file_size }
-    }
-  }
-  if (msg.document) {
-    const mime = msg.document.mime_type || ''
-    if (!mime) {
-      return {
-        ok: false,
-        reason: '被回复的文件没有 mime_type，无法确认是否是图片'
+      file: {
+        fileId: largest.file_id,
+        fileSize: largest.file_size,
+        kind: 'image'
       }
     }
-    if (!mime.startsWith('image/')) {
+  }
+  if (msg.sticker) {
+    // is_video is on the Bot API but missing from telegram-typings@5's Sticker.
+    const isVideo = (msg.sticker as { is_video?: boolean }).is_video === true
+    if (msg.sticker.is_animated) {
       return {
         ok: false,
-        reason: `被回复的文件是 ${mime} 类型，需要 image/* 类型`
+        reason: '被回复的是 tgs 动画贴纸，当前不支持'
+      }
+    }
+    if (isVideo) {
+      return {
+        ok: true,
+        file: {
+          fileId: msg.sticker.file_id,
+          fileSize: msg.sticker.file_size,
+          kind: 'video',
+          mimeType: 'video/webm'
+        }
       }
     }
     return {
       ok: true,
-      file: { fileId: msg.document.file_id, fileSize: msg.document.file_size }
+      file: {
+        fileId: msg.sticker.file_id,
+        fileSize: msg.sticker.file_size,
+        kind: 'image',
+        mimeType: 'image/webp'
+      }
     }
   }
   if (msg.animation) {
     return {
-      ok: false,
-      reason: '被回复的是动图（Telegram 内部是 MP4），当前不支持'
+      ok: true,
+      file: {
+        fileId: msg.animation.file_id,
+        fileSize: msg.animation.file_size,
+        kind: 'video',
+        mimeType: msg.animation.mime_type || 'video/mp4'
+      }
     }
   }
-  if (msg.video) return { ok: false, reason: '被回复的是视频，当前不支持' }
-  if (msg.video_note) {
-    return { ok: false, reason: '被回复的是圆形视频消息，当前不支持' }
+  if (msg.video) {
+    return {
+      ok: true,
+      file: {
+        fileId: msg.video.file_id,
+        fileSize: msg.video.file_size,
+        kind: 'video',
+        mimeType: msg.video.mime_type || 'video/mp4'
+      }
+    }
   }
-  if (msg.sticker) return { ok: false, reason: '被回复的是贴纸，当前不支持' }
+  if (msg.video_note) {
+    return {
+      ok: true,
+      file: {
+        fileId: msg.video_note.file_id,
+        fileSize: msg.video_note.file_size,
+        kind: 'video',
+        mimeType: 'video/mp4'
+      }
+    }
+  }
+  if (msg.document) {
+    const mime = msg.document.mime_type || ''
+    if (mime.startsWith('image/')) {
+      return {
+        ok: true,
+        file: {
+          fileId: msg.document.file_id,
+          fileSize: msg.document.file_size,
+          kind: 'image',
+          mimeType: mime
+        }
+      }
+    }
+    if (mime.startsWith('video/')) {
+      return {
+        ok: true,
+        file: {
+          fileId: msg.document.file_id,
+          fileSize: msg.document.file_size,
+          kind: 'video',
+          mimeType: mime
+        }
+      }
+    }
+    if (!mime) {
+      return {
+        ok: false,
+        reason: '被回复的文件没有 mime_type，无法确认是否是图片或视频'
+      }
+    }
+    return {
+      ok: false,
+      reason: `被回复的文件是 ${mime} 类型，需要 image/* 或 video/* 类型`
+    }
+  }
   if (msg.voice) return { ok: false, reason: '被回复的是语音消息' }
   if (msg.audio) return { ok: false, reason: '被回复的是音频文件' }
   if (msg.text) {
-    return { ok: false, reason: '被回复的是纯文本消息，没有图片或图片文件' }
+    return { ok: false, reason: '被回复的是纯文本消息，没有图片或视频' }
   }
-  return { ok: false, reason: '被回复的消息里没有找到可转换的图片或图片文件' }
+  return { ok: false, reason: '被回复的消息里没有找到可转换的图片或视频' }
+}
+
+const FFMPEG_VIDEO_TO_GIF_FILTER =
+  'fps=15,split[s0][s1];[s0]palettegen=stats_mode=diff[p];' +
+  '[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle'
+
+const mimeToExt = (mime: string | undefined) => {
+  if (!mime) return 'dat'
+  if (mime.includes('webm')) return 'webm'
+  if (mime.includes('mp4')) return 'mp4'
+  if (mime.includes('quicktime')) return 'mov'
+  return 'dat'
+}
+
+const runFfmpegVideoToGif = async (
+  inputBuffer: Buffer,
+  inputMime: string | undefined
+): Promise<Buffer> => {
+  const rand = crypto.randomBytes(8).toString('hex')
+  const inputPath = path.join(
+    os.tmpdir(),
+    `imgconv-${rand}-in.${mimeToExt(inputMime)}`
+  )
+  const outputPath = path.join(os.tmpdir(), `imgconv-${rand}-out.gif`)
+  try {
+    await fs.writeFile(inputPath, inputBuffer)
+    await execa('ffmpeg', [
+      '-y',
+      '-hide_banner',
+      '-loglevel',
+      'error',
+      '-i',
+      inputPath,
+      '-vf',
+      FFMPEG_VIDEO_TO_GIF_FILTER,
+      outputPath
+    ])
+    return await fs.readFile(outputPath)
+  } finally {
+    await fs.rm(inputPath, { force: true }).catch(() => {})
+    await fs.rm(outputPath, { force: true }).catch(() => {})
+  }
 }
 
 const collectStreamToBuffer = (
@@ -176,7 +302,11 @@ const collectStreamToBuffer = (
       total += chunk.length
       if (total > sizeLimit) {
         ;(stream as { destroy?: () => void }).destroy?.()
-        reject(new Error('文件下载超过 30M 上限。'))
+        reject(
+          new Error(
+            `文件下载超过 ${(sizeLimit / 1024 / 1024).toFixed(0)}M 上限。`
+          )
+        )
         return
       }
       chunks.push(chunk)
@@ -245,9 +375,19 @@ const createWorker = (worker: BotType) => {
       return
     }
     const source = detection.file
-    if (source.fileSize && source.fileSize > MAX_FILE_SIZE) {
+    if (source.kind === 'video' && targetFormat !== 'gif') {
       await sendMessageToCurrentChat(
-        `文件过大：${(source.fileSize / 1024 / 1024).toFixed(1)}M，超过上限 30M。`
+        `视频输入只支持转换为 gif，当前目标格式是 ${targetFormat}。`
+      )
+      return
+    }
+    const inputSizeLimit =
+      source.kind === 'video' ? MAX_VIDEO_INPUT_SIZE : MAX_IMAGE_INPUT_SIZE
+    if (source.fileSize && source.fileSize > inputSizeLimit) {
+      const limitMB = (inputSizeLimit / 1024 / 1024).toFixed(0)
+      const sizeMB = (source.fileSize / 1024 / 1024).toFixed(1)
+      await sendMessageToCurrentChat(
+        `文件过大：${sizeMB}M，${source.kind === 'video' ? '视频' : '图片'}输入上限 ${limitMB}M。`
       )
       return
     }
@@ -307,19 +447,22 @@ const createWorker = (worker: BotType) => {
           const stream = downloadStream(fileLink)
           const inputBuffer = await collectStreamToBuffer(
             stream,
-            MAX_FILE_SIZE
+            inputSizeLimit
           )
 
           worker.instance.telegram
             .sendChatAction(currentChatId, 'upload_document')
             .catch(() => {})
 
-          const outputBuffer = await sharp(inputBuffer, {
-            animated: true,
-            limitInputPixels: SHARP_INPUT_PIXEL_LIMIT
-          })
-            .toFormat(sharpFormat)
-            .toBuffer()
+          const outputBuffer =
+            source.kind === 'video'
+              ? await runFfmpegVideoToGif(inputBuffer, source.mimeType)
+              : await sharp(inputBuffer, {
+                  animated: true,
+                  limitInputPixels: SHARP_INPUT_PIXEL_LIMIT
+                })
+                  .toFormat(sharpFormat)
+                  .toBuffer()
 
           await worker.instance.telegram.sendDocument(
             currentChatId,
