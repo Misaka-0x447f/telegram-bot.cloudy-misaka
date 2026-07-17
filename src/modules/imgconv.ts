@@ -263,7 +263,8 @@ const mimeToExt = (mime: string | undefined) => {
 
 const runFfmpegVideoToGif = async (
   inputBuffer: Buffer,
-  inputMime: string | undefined
+  inputMime: string | undefined,
+  timeoutMs: number
 ): Promise<Buffer> => {
   const rand = crypto.randomBytes(8).toString('hex')
   const inputPath = path.join(
@@ -283,7 +284,7 @@ const runFfmpegVideoToGif = async (
       '-vf',
       FFMPEG_VIDEO_TO_GIF_FILTER,
       outputPath
-    ])
+    ], { timeout: timeoutMs, killSignal: 'SIGKILL' })
     return await fs.readFile(outputPath)
   } finally {
     await fs.rm(inputPath, { force: true }).catch(() => {})
@@ -456,13 +457,22 @@ const createWorker = (worker: BotType) => {
 
           const outputBuffer =
             source.kind === 'video'
-              ? await runFfmpegVideoToGif(inputBuffer, source.mimeType)
+              ? await runFfmpegVideoToGif(
+                  inputBuffer,
+                  source.mimeType,
+                  TASK_TIMEOUT_MS
+                )
               : await sharp(inputBuffer, {
                   animated: true,
                   limitInputPixels: SHARP_INPUT_PIXEL_LIMIT
                 })
                   .toFormat(sharpFormat)
                   .toBuffer()
+
+          // If the race already resolved as a timeout, don't dispatch the
+          // completed file — the user has already been told this attempt
+          // failed, and sending it now would contradict that message.
+          if (timedOut) return
 
           await worker.instance.telegram.sendDocument(
             currentChatId,
