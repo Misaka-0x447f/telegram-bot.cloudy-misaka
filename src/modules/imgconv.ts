@@ -429,6 +429,7 @@ const createWorker = (worker: BotType) => {
     let conversionSucceeded = false
     let timedOut = false
     let timeoutHandle: NodeJS.Timeout | undefined
+    const taskDeadline = Date.now() + TASK_TIMEOUT_MS
     try {
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutHandle = setTimeout(() => {
@@ -460,7 +461,7 @@ const createWorker = (worker: BotType) => {
               ? await runFfmpegVideoToGif(
                   inputBuffer,
                   source.mimeType,
-                  TASK_TIMEOUT_MS
+                  Math.max(1, taskDeadline - Date.now())
                 )
               : await sharp(inputBuffer, {
                   animated: true,
