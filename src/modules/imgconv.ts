@@ -491,10 +491,22 @@ const createWorker = (worker: BotType) => {
       ])
       conversionSucceeded = true
     } catch (e) {
+      // execa sets `timedOut` on its error when the child hits its own
+      // timeout; treat that the same as the outer race so both deadlines
+      // converge on one "task timeout" behavior (no refund, unified msg).
+      const isExecaTimeout =
+        typeof e === 'object' &&
+        e !== null &&
+        (e as { timedOut?: boolean }).timedOut === true
+      if (isExecaTimeout) timedOut = true
       if (!timedOut) {
         state.quota = Math.min(MAX_QUOTA, state.quota + 1)
       }
-      const msg = e instanceof Error ? e.message : String(e)
+      const msg = timedOut
+        ? `任务超时（${TASK_TIMEOUT_MS / 1000} 秒内未完成），本次仍会消耗额度。`
+        : e instanceof Error
+        ? e.message
+        : String(e)
       await sendMessageToCurrentChat(`转换失败：${msg}`)
     } finally {
       if (timeoutHandle) clearTimeout(timeoutHandle)
