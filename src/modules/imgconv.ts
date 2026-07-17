@@ -249,8 +249,19 @@ const detectSourceFile = (msg: Message | undefined): DetectResult => {
   return { ok: false, reason: '被回复的消息里没有找到可转换的图片或视频' }
 }
 
+// Cap decoded frame dimensions so a highly-compressed but ultra-high-res
+// video (still <=1M on disk) can't blow up ffmpeg's memory/CPU during
+// palettegen/paletteuse. The scale expression:
+//   - picks the longer side and caps it at 2000 while keeping the other at -2
+//   - never upscales (min(2000, iw|ih) keeps the smaller side unchanged)
+// Commas inside the ffmpeg expressions are escaped with `\,` so ffmpeg's
+// filter-graph parser doesn't treat them as filter separators.
 const FFMPEG_VIDEO_TO_GIF_FILTER =
-  'fps=15,split[s0][s1];[s0]palettegen=stats_mode=diff[p];' +
+  'fps=15,' +
+  'scale=w=if(gt(iw\\,ih)\\,min(2000\\,iw)\\,-2)' +
+  ':h=if(gt(iw\\,ih)\\,-2\\,min(2000\\,ih))' +
+  ':flags=lanczos,' +
+  'split[s0][s1];[s0]palettegen=stats_mode=diff[p];' +
   '[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle'
 
 const mimeToExt = (mime: string | undefined) => {
