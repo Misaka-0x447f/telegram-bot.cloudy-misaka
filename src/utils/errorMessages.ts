@@ -3,7 +3,7 @@ export interface ParamsDefinition {
   replyMessageType?: string
 }
 
-const getHelpMessage = (params: ParamsDefinition) => {
+export const getHelpMessage = (params: ParamsDefinition) => {
   const content = []
   if (params.argumentList?.length) {
     const maxLength = params.argumentList.reduce((acc, cur) => {

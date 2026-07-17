@@ -5,7 +5,10 @@ import {
   exportBot,
   getTelegramBotByAnyBotName
 } from '../interface/telegram'
-import errorMessages, { ParamsDefinition } from '../utils/errorMessages'
+import errorMessages, {
+  getHelpMessage,
+  ParamsDefinition
+} from '../utils/errorMessages'
 import { downloadStream } from '../utils/file'
 
 const SHORT_COOLDOWN_MS = 30 * 1000
@@ -234,13 +237,10 @@ const createWorker = (worker: BotType) => {
     }
     const detection = detectSourceFile(reply)
     if (!detection.ok) {
-      const replyHelpMessage = errorMessages
-        .illegalReplyMessage(paramDefinition)
-        .split('\n')
-        .slice(1)
-        .join('\n')
       await sendMessageToCurrentChat(
-        `不合法的回复消息：${detection.reason}。\n${replyHelpMessage}`
+        `不合法的回复消息：${detection.reason}。\n${getHelpMessage(
+          paramDefinition
+        )}`
       )
       return
     }
