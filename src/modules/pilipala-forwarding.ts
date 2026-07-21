@@ -141,23 +141,32 @@ const opusUrl = (id: string) => `https://www.bilibili.com/opus/${id}`
 const videoUrl = (bvid: string) => `https://www.bilibili.com/video/${bvid}`
 const stripProto = (u: string) => u.replace(/^http:\/\//, 'https://')
 
+// desktop 端点的 modules 是 array，每个元素带 module_type 标签
+const findModule = (item: Item, type: string): any =>
+  (item.modules ?? []).find((m: any) => m.module_type === type) ?? {}
+
 const shouldDrop = (item: Item): boolean => {
   // LIVE_RCMD 由 bili-live 模块负责，避免重复
   if (item.type === 'DYNAMIC_TYPE_LIVE_RCMD') return true
-  // 置顶：id 通常远小于最新动态，理论上会被 offset 过滤掉，但保险起见排除
-  if (item.modules?.module_tag?.text === '置顶') return true
+  // 置顶：desktop 端点用 module_author.is_top 标记
+  if (findModule(item, 'MODULE_TYPE_AUTHOR').module_author?.is_top) return true
   return false
 }
 
 const normalize = (item: Item): Normalized | null => {
   const type: string = item.type
-  const author = item.modules?.module_author
-  const dyn = item.modules?.module_dynamic
+  const author = findModule(item, 'MODULE_TYPE_AUTHOR').module_author
+  const desc = findModule(item, 'MODULE_TYPE_DESC').module_desc
+  const dynMod = findModule(item, 'MODULE_TYPE_DYNAMIC').module_dynamic
+
   const base: NormalizedBase = {
     id: item.id_str,
     pubTs: Number(author?.pub_ts ?? 0),
-    author: { name: author?.name ?? '', mid: Number(author?.mid ?? 0) },
-    text: dyn?.desc?.text ?? '',
+    author: {
+      name: author?.user?.name ?? '',
+      mid: Number(author?.user?.mid ?? 0)
+    },
+    text: desc?.text ?? '',
     url: opusUrl(item.id_str)
   }
 
@@ -166,7 +175,7 @@ const normalize = (item: Item): Normalized | null => {
   }
 
   if (type === 'DYNAMIC_TYPE_DRAW') {
-    const rawPics = dyn?.major?.draw?.items ?? []
+    const rawPics = dynMod?.dyn_draw?.items ?? []
     const pics: string[] = rawPics
       .map((p: any) => stripProto(p.src))
       .filter(Boolean)
@@ -174,7 +183,7 @@ const normalize = (item: Item): Normalized | null => {
   }
 
   if (type === 'DYNAMIC_TYPE_AV') {
-    const archive = dyn?.major?.archive
+    const archive = dynMod?.dyn_archive
     if (!archive) return null
     return {
       ...base,
@@ -189,27 +198,27 @@ const normalize = (item: Item): Normalized | null => {
   }
 
   if (type === 'DYNAMIC_TYPE_FORWARD') {
-    const orig = item.orig
-    if (!orig) {
+    const origItem = dynMod?.dyn_forward?.item
+    if (!origItem) {
       return {
         ...base,
         kind: 'FORWARD',
         forward: { author: '', text: '', pics: [], url: '' }
       }
     }
-    const origAuthor = orig.modules?.module_author?.name ?? ''
-    const origDyn = orig.modules?.module_dynamic
-    const origText = origDyn?.desc?.text ?? ''
-    const origDrawItems = origDyn?.major?.draw?.items ?? []
+    const origAuthor = findModule(origItem, 'MODULE_TYPE_AUTHOR').module_author
+    const origDesc = findModule(origItem, 'MODULE_TYPE_DESC').module_desc
+    const origDynMod = findModule(origItem, 'MODULE_TYPE_DYNAMIC').module_dynamic
+    const origDrawItems = origDynMod?.dyn_draw?.items ?? []
     const origPics: string[] = origDrawItems
       .map((p: any) => stripProto(p.src))
       .filter(Boolean)
-    const origArchive = origDyn?.major?.archive
+    const origArchive = origDynMod?.dyn_archive
     const forwardObj: NormalizedForward['forward'] = {
-      author: origAuthor,
-      text: origText,
+      author: origAuthor?.user?.name ?? '',
+      text: origDesc?.text ?? '',
       pics: origPics,
-      url: opusUrl(orig.id_str)
+      url: opusUrl(origItem.id_str)
     }
     if (origArchive) {
       forwardObj.videoTitle = origArchive.title ?? ''
