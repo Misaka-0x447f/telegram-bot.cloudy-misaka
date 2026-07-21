@@ -121,6 +121,12 @@ type PersistConfigEntries = {
     TelegramBotName,
     OpenRouterMonitorRule
   >
+  pilipala: Record<TelegramBotName, {
+    hostMid: string
+    dest: number
+    updateInterval: number
+    superusers?: number[]
+  }>
   getUserInfo: Record<TelegramBotName, EmptyConfig>
   ping: Record<TelegramBotName, Record<'actions', Actions>>
   repeater: Record<TelegramBotName, EmptyConfig>

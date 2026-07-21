@@ -21,11 +21,11 @@ const paramDefinition = {
   ]
 }
 
-for (const [botName, _] of Object.entries(persistConfig.entries.getUserInfo)) {
+for (const botName of Object.keys(persistConfig.entries.getUserInfo)) {
   const bot = getTelegramBotByAnyBotName(botName)
   bot.command.sub(
     async ({ ctx, args, commandName, sendMessageToCurrentChat }) => {
-      if (commandName !== 'get_user_info' || !ctx.chat) return
+      if (commandName !== 'whoareyou' || !ctx.chat) return
       if (args[0]?.match(/^(\d+|\w+)$/)) {
         await sendMessageToCurrentChat('正在查询')
         const chatInfo = await bot.instance.telegram.getChat(
@@ -40,7 +40,7 @@ for (const [botName, _] of Object.entries(persistConfig.entries.getUserInfo)) {
           }
           return null
         })
-        chatInfo && await sendMessageToCurrentChat(chatIdInfo(chatInfo))
+        if (chatInfo) await sendMessageToCurrentChat(chatIdInfo(chatInfo))
       } else if (!args[0]) {
         await sendMessageToCurrentChat('正在查询')
         await sendMessageToCurrentChat(chatIdInfo(ctx.chat))
