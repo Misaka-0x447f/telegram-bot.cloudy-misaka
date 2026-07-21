@@ -145,6 +145,19 @@ const stripProto = (u: string) => u.replace(/^http:\/\//, 'https://')
 const findModule = (item: Item, type: string): any =>
   (item.modules ?? []).find((m: any) => m.module_type === type) ?? {}
 
+// 剥掉 bili 表情包（[xxx_yyy] 形式，从 rich_text_nodes 里精确剔除，
+// 避免误伤正文里合法的方括号）；若剥完是空的，就保留原文本
+const extractText = (desc: any): string => {
+  if (!desc) return ''
+  const nodes = desc.rich_text_nodes
+  if (!Array.isArray(nodes) || nodes.length === 0) return desc.text ?? ''
+  const nonEmoji = nodes.filter(
+    (n: any) => n.type !== 'RICH_TEXT_NODE_TYPE_EMOJI'
+  )
+  const joined = nonEmoji.map((n: any) => n.text ?? '').join('').trim()
+  return joined || (desc.text ?? '')
+}
+
 const shouldDrop = (item: Item): boolean => {
   // LIVE_RCMD 由 bili-live 模块负责，避免重复
   if (item.type === 'DYNAMIC_TYPE_LIVE_RCMD') return true
@@ -166,7 +179,7 @@ const normalize = (item: Item): Normalized | null => {
       name: author?.user?.name ?? '',
       mid: Number(author?.user?.mid ?? 0)
     },
-    text: desc?.text ?? '',
+    text: extractText(desc),
     url: opusUrl(item.id_str)
   }
 
@@ -216,7 +229,7 @@ const normalize = (item: Item): Normalized | null => {
     const origArchive = origDynMod?.dyn_archive
     const forwardObj: NormalizedForward['forward'] = {
       author: origAuthor?.user?.name ?? '',
-      text: origDesc?.text ?? '',
+      text: extractText(origDesc),
       pics: origPics,
       url: opusUrl(origItem.id_str)
     }
