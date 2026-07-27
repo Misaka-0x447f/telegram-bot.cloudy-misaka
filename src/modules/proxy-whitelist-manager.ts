@@ -8,6 +8,10 @@
  *
  * 权限：superusers 里放的是群 id，只有这些群里发的命令有效；私聊 chat.id 是正数，
  * 不会落在群 id 列表里，因此「私聊无反应」是这条规则的自然结果，无需单独判断。
+ *
+ * 并发：TypedEvent 的 dispatch 不 await 订阅者，因此多条命令天然并行，各自持有
+ * 自己那条命令消息的 id，👀 各清各的。版本号单调递增，A 等 v5、B 等 v6，路由器
+ * 拉到 v6 时两边的 `served.version >= N` 同时成立，各自正确收尾。
  */
 
 import got from 'got'
@@ -36,6 +40,22 @@ const PENDING_TTL = 5 * 60 * 1000
 const REQUEST_TIMEOUT = 20 * 1000
 
 const TIMEOUT_TEXT = '未收到规则更新成功消息，请联系技术支持协助排查'
+
+// ---------- 文本渲染 ----------
+
+const MD: { parse_mode: tt.ParseMode } = { parse_mode: 'MarkdownV2' }
+
+/**
+ * 包成 MarkdownV2 代码块。
+ *
+ * 裸文本里 MarkdownV2 要转义 18 个字符（_*[]()~`>#+-=|{}.!），漏一个整条消息就发不出去；
+ * 而代码块内只需转义反引号与反斜杠。DOMAIN-SUFFIX 的连字符、reason 的下划线、
+ * 用法提示里的尖括号全都靠这个规避，顺带拿到等宽效果。
+ * 所有变量插值一律走这里，固定文案则已逐条核对不含特殊字符。
+ */
+const code = (text: string) => '`' + text.replace(/[`\\]/g, '\\$&') + '`'
+
+const ruleText = (domain: string) => code(`${RULE_TYPE}, ${domain}`)
 
 // ---------- 域名 ----------
 
@@ -117,7 +137,7 @@ const REASON_TEXT: Record<string, string> = {
 
 const describeFailure = (status: number, body: unknown): string => {
   const reason = (body as AdminError | null)?.reason
-  if (reason) return REASON_TEXT[reason] ?? `失败：${reason}`
+  if (reason) return REASON_TEXT[reason] ?? `失败：${code(reason)}`
   if (status === 0) return '连接 Worker 失败，检查 baseUrl 与网络'
   return `Worker 返回 HTTP ${status}`
 }
@@ -153,7 +173,7 @@ const editText = async (
   chatId: number,
   messageId: number,
   text: string,
-  extra?: tt.ExtraEditMessage
+  extra: tt.ExtraEditMessage = MD
 ) => {
   await bot.instance.telegram
     .editMessageText(chatId, messageId, undefined, text, extra)
@@ -167,6 +187,31 @@ const extractArg = (text: string, username?: string): string => {
   let rest = text.replace(/^\/[A-Za-z0-9_]+(?:@[A-Za-z0-9_]+)?\s*/, '')
   if (username) rest = rest.replace(new RegExp(`@${username}$`), '')
   return rest.trim()
+}
+
+/**
+ * handler 顶层兜底。dispatch 不 await 订阅者，异常连 unhandledRejection 都没人管，
+ * 而 👀 是在流程开头挂上的——中途抛错就会永久残留。这里强制收尾。
+ */
+const guard = async (
+  bot: Bot,
+  chatId: number,
+  commandMessageId: number,
+  run: () => Promise<void>
+) => {
+  try {
+    await run()
+  } catch (error) {
+    void telemetry(
+      'modules/proxy-whitelist-manager.ts/guard',
+      '命令处理异常',
+      error
+    )
+    await setReaction(bot, chatId, commandMessageId, null)
+    await bot
+      .sendMessage(chatId, '处理命令时发生意外错误，已记录日志', MD)
+      .catch(() => undefined)
+  }
 }
 
 // ---------- 送达回执 ----------
@@ -253,7 +298,7 @@ setInterval(() => {
 
 const handleSearch = async (bot: Bot, config: Config, chatId: number, keyword: string) => {
   if (!keyword) {
-    await bot.sendMessage(chatId, '用法：/search <关键字>')
+    await bot.sendMessage(chatId, `用法：${code('/search <关键字>')}`, MD)
     return
   }
 
@@ -261,11 +306,11 @@ const handleSearch = async (bot: Bot, config: Config, chatId: number, keyword: s
     searchParams: { q: keyword, limit: SEARCH_LIMIT }
   })
   if (!body || !body.ok) {
-    await bot.sendMessage(chatId, describeFailure(status, body))
+    await bot.sendMessage(chatId, describeFailure(status, body), MD)
     return
   }
   if (body.total === 0) {
-    await bot.sendMessage(chatId, `没有找到包含「${keyword}」的规则`)
+    await bot.sendMessage(chatId, `没有找到包含 ${code(keyword)} 的规则`, MD)
     return
   }
 
@@ -273,8 +318,8 @@ const handleSearch = async (bot: Bot, config: Config, chatId: number, keyword: s
     body.total > body.matches.length
       ? `共 ${body.total} 条，显示前 ${body.matches.length} 条：`
       : `共 ${body.total} 条：`
-  const lines = body.matches.map((r) => `${r.type},${r.value}`)
-  await bot.sendMessage(chatId, `${header}\n${lines.join('\n')}`)
+  const lines = body.matches.map((r) => code(`${r.type},${r.value}`))
+  await bot.sendMessage(chatId, `${header}\n${lines.join('\n')}`, MD)
 }
 
 const handleAdd = async (
@@ -289,7 +334,10 @@ const handleAdd = async (
   if (!domain) {
     await bot.sendMessage(
       chatId,
-      raw ? `域名格式非法：${raw}` : '用法：/addDomainSuffix <域名>'
+      raw
+        ? `域名格式非法：${code(raw)}`
+        : `用法：${code('/addDomainSuffix <域名>')}`,
+      MD
     )
     return
   }
@@ -297,7 +345,8 @@ const handleAdd = async (
   await setReaction(bot, chatId, commandMessageId, EYES)
   const progress = await bot.sendMessage(
     chatId,
-    `正在添加规则 ${RULE_TYPE}, ${domain}`
+    `正在添加规则 ${ruleText(domain)}`,
+    MD
   )
   await runMutation({
     bot,
@@ -324,7 +373,10 @@ const handleRemove = async (
   if (!domain) {
     await bot.sendMessage(
       chatId,
-      raw ? `域名格式非法：${raw}` : '用法：/removeDomainSuffix <域名>'
+      raw
+        ? `域名格式非法：${code(raw)}`
+        : `用法：${code('/removeDomainSuffix <域名>')}`,
+      MD
     )
     return
   }
@@ -335,31 +387,28 @@ const handleRemove = async (
     searchParams: { type: RULE_TYPE, value: domain }
   })
   if (!body || !body.ok) {
-    await bot.sendMessage(chatId, describeFailure(status, body))
+    await bot.sendMessage(chatId, describeFailure(status, body), MD)
     await setReaction(bot, chatId, commandMessageId, null)
     return
   }
   if (!body.rule) {
-    await bot.sendMessage(chatId, `未找到该规则：${RULE_TYPE}, ${domain}`)
+    await bot.sendMessage(chatId, `未找到该规则：${ruleText(domain)}`, MD)
     await setReaction(bot, chatId, commandMessageId, null)
     return
   }
 
   const nonce = makeNonce()
-  const prompt = await bot.sendMessage(
-    chatId,
-    `确认移除 ${RULE_TYPE}, ${domain}？`,
-    {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '确定', callback_data: `pwm:${nonce}:ok` },
-            { text: '取消', callback_data: `pwm:${nonce}:no` }
-          ]
+  const prompt = await bot.sendMessage(chatId, `确认移除 ${ruleText(domain)}？`, {
+    ...MD,
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '确定', callback_data: `pwm:${nonce}:ok` },
+          { text: '取消', callback_data: `pwm:${nonce}:no` }
         ]
-      }
+      ]
     }
-  )
+  })
 
   pending.set(nonce, {
     botName,
@@ -391,31 +440,38 @@ for (const [botName, config] of Object.entries(configs ?? {})) {
     // 非授权群一律静默，不给任何反馈
     if (!config.superusers?.includes(currentChatId)) return
 
-    const arg = extractArg(message.text ?? '', bot.username)
-    const actor = `tg:${message.from?.id ?? 'unknown'}`
-
     // 去掉下划线后统一小写比较，于是 /addDomainSuffix、/adddomainsuffix、
     // /add_domain_suffix 指向同一条命令。BotFather 的 setcommands 只接受
     // 小写与下划线，这样注册成 snake_case 的同时手打驼峰依然有效。
-    switch (commandName.toLowerCase().replace(/_/g, '')) {
-      case 'search':
-        await handleSearch(bot, config, currentChatId, arg)
-        break
-      case 'adddomainsuffix':
-        await handleAdd(bot, config, currentChatId, message.message_id, actor, arg)
-        break
-      case 'removedomainsuffix':
-        await handleRemove(
-          bot,
-          botName,
-          config,
-          currentChatId,
-          message.message_id,
-          actor,
-          arg
-        )
-        break
+    const cmd = commandName.toLowerCase().replace(/_/g, '')
+    if (cmd !== 'search' && cmd !== 'adddomainsuffix' && cmd !== 'removedomainsuffix') {
+      return
     }
+
+    await guard(bot, currentChatId, message.message_id, async () => {
+      const arg = extractArg(message.text ?? '', bot.username)
+      const actor = `tg:${message.from?.id ?? 'unknown'}`
+
+      switch (cmd) {
+        case 'search':
+          await handleSearch(bot, config, currentChatId, arg)
+          break
+        case 'adddomainsuffix':
+          await handleAdd(bot, config, currentChatId, message.message_id, actor, arg)
+          break
+        case 'removedomainsuffix':
+          await handleRemove(
+            bot,
+            botName,
+            config,
+            currentChatId,
+            message.message_id,
+            actor,
+            arg
+          )
+          break
+      }
+    })
   })
 
   // 框架的 eventBus 只转发 message，callback_query 得自己挂。
@@ -434,27 +490,29 @@ for (const [botName, config] of Object.entries(configs ?? {})) {
     pending.delete(nonce)
     await ctx.answerCbQuery().catch(() => undefined)
 
-    if (action !== 'ok') {
-      await editText(bot, entry.chatId, entry.promptMessageId, '已取消')
-      await setReaction(bot, entry.chatId, entry.commandMessageId, null)
-      return
-    }
+    await guard(bot, entry.chatId, entry.commandMessageId, async () => {
+      if (action !== 'ok') {
+        await editText(bot, entry.chatId, entry.promptMessageId, '已取消')
+        await setReaction(bot, entry.chatId, entry.commandMessageId, null)
+        return
+      }
 
-    await editText(
-      bot,
-      entry.chatId,
-      entry.promptMessageId,
-      `正在移除规则 ${RULE_TYPE}, ${entry.domain}`
-    )
-    await runMutation({
-      bot,
-      config,
-      chatId: entry.chatId,
-      commandMessageId: entry.commandMessageId,
-      progressMessageId: entry.promptMessageId,
-      action: 'remove',
-      domain: entry.domain,
-      actor: entry.actor
+      await editText(
+        bot,
+        entry.chatId,
+        entry.promptMessageId,
+        `正在移除规则 ${ruleText(entry.domain)}`
+      )
+      await runMutation({
+        bot,
+        config,
+        chatId: entry.chatId,
+        commandMessageId: entry.commandMessageId,
+        progressMessageId: entry.promptMessageId,
+        action: 'remove',
+        domain: entry.domain,
+        actor: entry.actor
+      })
     })
   })
 }
