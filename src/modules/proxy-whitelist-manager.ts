@@ -167,19 +167,11 @@ const setReaction = async (
     )
 }
 
-/** 编辑时不带 reply_markup，Telegram 会一并移除原有键盘 */
-const editText = async (
-  bot: Bot,
-  chatId: number,
-  messageId: number,
-  text: string,
-  extra: tt.ExtraEditMessage = MD
-) => {
-  await bot.instance.telegram
-    .editMessageText(chatId, messageId, undefined, text, extra)
-    .catch((error) =>
-      telemetry('modules/proxy-whitelist-manager.ts/editText', '', error)
-    )
+/** 每一步都另发一条消息，既有消息一律不动——不编辑也不删除 */
+const say = async (bot: Bot, chatId: number, text: string) => {
+  await bot
+    .sendMessage(chatId, text, MD)
+    .catch((error) => telemetry('modules/proxy-whitelist-manager.ts/say', '', error))
 }
 
 /** 去掉命令本身与可能的尾部 @botname，剩下的就是参数 */
@@ -238,17 +230,14 @@ const runMutation = async (params: {
   chatId: number
   /** 用户发的那条命令消息，👀 挂在它上面 */
   commandMessageId: number
-  /** 进度消息，最终被编辑成结果 */
-  progressMessageId: number
   action: 'add' | 'remove'
   domain: string
   actor: string
 }) => {
-  const { bot, config, chatId, commandMessageId, progressMessageId, action, domain, actor } =
-    params
+  const { bot, config, chatId, commandMessageId, action, domain, actor } = params
 
   const finish = async (text: string) => {
-    await editText(bot, chatId, progressMessageId, text)
+    await say(bot, chatId, text)
     await setReaction(bot, chatId, commandMessageId, null)
   }
 
@@ -274,7 +263,6 @@ type Pending = {
   botName: string
   chatId: number
   commandMessageId: number
-  promptMessageId: number
   domain: string
   actor: string
   expireAt: number
@@ -343,17 +331,12 @@ const handleAdd = async (
   }
 
   await setReaction(bot, chatId, commandMessageId, EYES)
-  const progress = await bot.sendMessage(
-    chatId,
-    `正在添加规则 ${ruleText(domain)}`,
-    MD
-  )
+  await say(bot, chatId, `正在添加规则 ${ruleText(domain)}`)
   await runMutation({
     bot,
     config,
     chatId,
     commandMessageId,
-    progressMessageId: progress.message_id,
     action: 'add',
     domain,
     actor
@@ -398,7 +381,17 @@ const handleRemove = async (
   }
 
   const nonce = makeNonce()
-  const prompt = await bot.sendMessage(chatId, `确认移除 ${ruleText(domain)}？`, {
+  // 先登记再发消息：键盘随消息一起出现，注册晚于发送会留下一个必然「已过期」的窗口
+  pending.set(nonce, {
+    botName,
+    chatId,
+    commandMessageId,
+    domain,
+    actor,
+    expireAt: Date.now() + PENDING_TTL
+  })
+
+  await bot.sendMessage(chatId, `确认移除 ${ruleText(domain)}？`, {
     ...MD,
     reply_markup: {
       inline_keyboard: [
@@ -408,16 +401,6 @@ const handleRemove = async (
         ]
       ]
     }
-  })
-
-  pending.set(nonce, {
-    botName,
-    chatId,
-    commandMessageId,
-    promptMessageId: prompt.message_id,
-    domain,
-    actor,
-    expireAt: Date.now() + PENDING_TTL
   })
 }
 
@@ -492,23 +475,17 @@ for (const [botName, config] of Object.entries(configs ?? {})) {
 
     await guard(bot, entry.chatId, entry.commandMessageId, async () => {
       if (action !== 'ok') {
-        await editText(bot, entry.chatId, entry.promptMessageId, '已取消')
+        await say(bot, entry.chatId, '已取消')
         await setReaction(bot, entry.chatId, entry.commandMessageId, null)
         return
       }
 
-      await editText(
-        bot,
-        entry.chatId,
-        entry.promptMessageId,
-        `正在移除规则 ${ruleText(entry.domain)}`
-      )
+      await say(bot, entry.chatId, `正在移除规则 ${ruleText(entry.domain)}`)
       await runMutation({
         bot,
         config,
         chatId: entry.chatId,
         commandMessageId: entry.commandMessageId,
-        progressMessageId: entry.promptMessageId,
         action: 'remove',
         domain: entry.domain,
         actor: entry.actor
