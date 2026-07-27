@@ -394,7 +394,10 @@ for (const [botName, config] of Object.entries(configs ?? {})) {
     const arg = extractArg(message.text ?? '', bot.username)
     const actor = `tg:${message.from?.id ?? 'unknown'}`
 
-    switch (commandName.toLowerCase()) {
+    // 去掉下划线后统一小写比较，于是 /addDomainSuffix、/adddomainsuffix、
+    // /add_domain_suffix 指向同一条命令。BotFather 的 setcommands 只接受
+    // 小写与下划线，这样注册成 snake_case 的同时手打驼峰依然有效。
+    switch (commandName.toLowerCase().replace(/_/g, '')) {
       case 'search':
         await handleSearch(bot, config, currentChatId, arg)
         break
