@@ -127,6 +127,15 @@ type PersistConfigEntries = {
     updateInterval: number
     superusers?: number[]
   }>
+  // superusers 放的是群 id：只有群里发的命令有权限，私聊一律静默
+  proxyWhitelistManager: Record<TelegramBotName, {
+    superusers: number[]
+    // proxy-transformer Worker 的根地址，例如 https://proxy-transformer.example.workers.dev
+    baseUrl: string
+    adminToken: string
+    // 盯哪个客户端的送达回执，须与订阅链接上的 ruleProviderIdentityTag 一致
+    identityTag: string
+  }>
   getUserInfo: Record<TelegramBotName, EmptyConfig>
   ping: Record<TelegramBotName, Record<'actions', Actions>>
   repeater: Record<TelegramBotName, EmptyConfig>

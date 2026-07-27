@@ -89,11 +89,19 @@ const botFactory = (el: typeof bots[0]) => {
   const sendMessage = retryableMethodFactory(
     el.instance.telegram.sendMessage.bind(el.instance.telegram)
   )
-  const parseCommand = (message: tt.Message) =>
-    (message.chat.type === 'private' && message.text?.match(/^\/(\w+).*$/)) ||
-    message.text?.match(
-      new RegExp(`^\\/(\\w+).*@${el.instance.options.username}$`)
-    )
+  // Telegram 客户端在群里补全出的是 `/cmd@bot args`，而旧正则要求整条消息以 @bot 结尾
+  // （即 `/cmd args@bot`），导致标准形式在群里完全触发不了。这里两种都认：标准形式优先，
+  // 尾部 @bot 的旧形式保留兼容，纯增量，不会让原本能触发的命令失效。
+  const parseCommand = (message: tt.Message) => {
+    const text = message.text
+    if (!text) return null
+    const username = el.instance.options.username
+    const standard = text.match(/^\/([A-Za-z0-9_]+)(?:@([A-Za-z0-9_]+))?(?:\s|$)/)
+    // 显式 @ 了别的 bot 就不接
+    if (standard && (!standard[2] || standard[2] === username)) return standard
+    if (!username) return null
+    return text.match(new RegExp(`^\\/([A-Za-z0-9_]+).*@${username}$`))
+  }
 
   el.instance.on('message', (ctx) => {
     const currentChat = ctx.update.message?.chat
