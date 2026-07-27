@@ -23,8 +23,9 @@ const configs = persistConfig.entries.proxyWhitelistManager
 type Bot = ReturnType<typeof getTelegramBotByAnyBotName>
 type Config = typeof configs[TelegramBotName]
 
+// classical rule-provider 的 payload 不承载规则去向，去向由主配置的
+// `RULE-SET,<name>,<策略组>` 指定，所以任何面向用户的文案都不该出现策略组名
 const RULE_TYPE = 'DOMAIN-SUFFIX'
-const TARGET_GROUP = 'bridge'
 const EYES = '👀'
 const SEARCH_LIMIT = 10
 
@@ -272,7 +273,7 @@ const handleSearch = async (bot: Bot, config: Config, chatId: number, keyword: s
     body.total > body.matches.length
       ? `共 ${body.total} 条，显示前 ${body.matches.length} 条：`
       : `共 ${body.total} 条：`
-  const lines = body.matches.map((r) => `${r.type},${r.value},${TARGET_GROUP}`)
+  const lines = body.matches.map((r) => `${r.type},${r.value}`)
   await bot.sendMessage(chatId, `${header}\n${lines.join('\n')}`)
 }
 
@@ -296,7 +297,7 @@ const handleAdd = async (
   await setReaction(bot, chatId, commandMessageId, EYES)
   const progress = await bot.sendMessage(
     chatId,
-    `正在添加规则 ${RULE_TYPE}, ${domain}, ${TARGET_GROUP}`
+    `正在添加规则 ${RULE_TYPE}, ${domain}`
   )
   await runMutation({
     bot,
@@ -347,7 +348,7 @@ const handleRemove = async (
   const nonce = makeNonce()
   const prompt = await bot.sendMessage(
     chatId,
-    `确认移除 ${RULE_TYPE}, ${domain}, ${TARGET_GROUP}？`,
+    `确认移除 ${RULE_TYPE}, ${domain}？`,
     {
       reply_markup: {
         inline_keyboard: [
@@ -440,7 +441,7 @@ for (const [botName, config] of Object.entries(configs ?? {})) {
       bot,
       entry.chatId,
       entry.promptMessageId,
-      `正在移除规则 ${RULE_TYPE}, ${entry.domain}, ${TARGET_GROUP}`
+      `正在移除规则 ${RULE_TYPE}, ${entry.domain}`
     )
     await runMutation({
       bot,
