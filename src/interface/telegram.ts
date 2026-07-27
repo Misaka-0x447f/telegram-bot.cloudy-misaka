@@ -13,6 +13,7 @@ import { SocksProxyAgent } from 'socks-proxy-agent'
 
 import { runActionFunctions } from '../utils/actionFunctions'
 import telegrafThrottler from 'telegraf-throttler'
+import Bottleneck from 'bottleneck'
 import { defaultTo } from 'lodash-es'
 
 const botList: Array<{ name: TelegramBotName; token: string }> = persistConfig
@@ -32,7 +33,26 @@ const bots = botList.map((el) => ({
 }))
 
 const botUsernameTable: Partial<Record<TelegramBotName, string>> = {}
-const throttler = telegrafThrottler()
+
+// telegraf-throttler 的入站默认值是 highWater:0 + OVERFLOW，即队列深度为零：
+// 只要上一条更新还没走完 minTime 窗口，下一条就被直接丢弃，且毫无反馈。
+// 给队列留 5 个位置，短时连发改为排队而不是丢弃；真丢弃时上报 telemetry，
+// 否则这类问题在日志里完全不可见。
+// 注意 opts.in 是整体替换而非合并，所以四个字段必须一起给。
+const throttler = telegrafThrottler({
+  in: {
+    highWater: 5,
+    maxConcurrent: 1,
+    minTime: 333,
+    strategy: Bottleneck.strategy.OVERFLOW
+  },
+  onThrottlerError: async (_ctx, _next, throttlerName, error) => {
+    void telemetry(
+      'interface/telegram.ts/throttler',
+      `${throttlerName} 丢弃了一条更新：${error.message}`
+    )
+  }
+})
 
 // username enables receiving group message. https://github.com/telegraf/telegraf/issues/134
 // note: you will need to kick bot then invite it again to receive group message.

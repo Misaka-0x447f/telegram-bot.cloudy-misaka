@@ -16,6 +16,7 @@
 
 import got from 'got'
 import * as tt from 'telegraf/typings/telegram-types'
+import { TelegrafContext } from 'telegraf/typings/context'
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import persistConfig from '../utils/persistConfig'
 import telemetry from '../utils/telemetry'
@@ -404,6 +405,46 @@ const handleRemove = async (
   })
 }
 
+/** 移除确认的后台流程。抽出来是为了让 callback_query 的中间件本身保持同步。 */
+const handleCallback = async (
+  bot: Bot,
+  botName: string,
+  config: Config,
+  ctx: TelegrafContext,
+  data: string
+) => {
+  const [, nonce, action] = data.split(':')
+  const entry = pending.get(nonce)
+  if (!entry || entry.botName !== botName) {
+    await ctx
+      .answerCbQuery('该键盘已超时，请重新执行命令')
+      .catch(() => undefined)
+    return
+  }
+
+  pending.delete(nonce)
+  await ctx.answerCbQuery().catch(() => undefined)
+
+  await guard(bot, entry.chatId, entry.commandMessageId, async () => {
+    if (action !== 'ok') {
+      await say(bot, entry.chatId, '已取消')
+      await setReaction(bot, entry.chatId, entry.commandMessageId, null)
+      return
+    }
+
+    await say(bot, entry.chatId, `正在移除规则 ${ruleText(entry.domain)}`)
+    await runMutation({
+      bot,
+      config,
+      chatId: entry.chatId,
+      commandMessageId: entry.commandMessageId,
+      action: 'remove',
+      domain: entry.domain,
+      actor: entry.actor
+    })
+  })
+}
+
 // ---------- 注册 ----------
 
 for (const [botName, config] of Object.entries(configs ?? {})) {
@@ -459,37 +500,17 @@ for (const [botName, config] of Object.entries(configs ?? {})) {
 
   // 框架的 eventBus 只转发 message，callback_query 得自己挂。
   // telegraf 允许对同一 updateType 追加多个处理器。
-  bot.instance.on('callback_query', async (ctx) => {
+  //
+  // 这个 handler 必须是同步的：telegraf 会 await 中间件返回的 Promise，而
+  // telegraf-throttler 的入站 maxConcurrent 是 1——一旦让它等 runMutation 的
+  // 回执轮询（最长 5 分钟），槽位就被占死，期间该 chat 的所有更新都会溢出丢弃。
+  // 所以立刻返回，完整流程扔到后台跑。
+  bot.instance.on('callback_query', (ctx) => {
     const data = ctx.callbackQuery?.data
     if (!data || !data.startsWith('pwm:')) return
 
-    const [, nonce, action] = data.split(':')
-    const entry = pending.get(nonce)
-    if (!entry || entry.botName !== botName) {
-      await ctx.answerCbQuery('这个确认已过期').catch(() => undefined)
-      return
-    }
-
-    pending.delete(nonce)
-    await ctx.answerCbQuery().catch(() => undefined)
-
-    await guard(bot, entry.chatId, entry.commandMessageId, async () => {
-      if (action !== 'ok') {
-        await say(bot, entry.chatId, '已取消')
-        await setReaction(bot, entry.chatId, entry.commandMessageId, null)
-        return
-      }
-
-      await say(bot, entry.chatId, `正在移除规则 ${ruleText(entry.domain)}`)
-      await runMutation({
-        bot,
-        config,
-        chatId: entry.chatId,
-        commandMessageId: entry.commandMessageId,
-        action: 'remove',
-        domain: entry.domain,
-        actor: entry.actor
-      })
-    })
+    void handleCallback(bot, botName, config, ctx, data).catch((error) =>
+      telemetry('modules/proxy-whitelist-manager.ts/callback', '', error)
+    )
   })
 }
