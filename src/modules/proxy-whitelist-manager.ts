@@ -17,6 +17,7 @@
 import got from 'got'
 import * as tt from 'telegraf/typings/telegram-types'
 import { TelegrafContext } from 'telegraf/typings/context'
+import { Message } from 'telegram-typings'
 import { getTelegramBotByAnyBotName } from '../interface/telegram'
 import persistConfig from '../utils/persistConfig'
 import telemetry from '../utils/telemetry'
@@ -183,6 +184,18 @@ const extractArg = (text: string, username?: string): string => {
 }
 
 /**
+ * 显式参数优先；命令本身没有参数时，把被回复消息的文本或说明文字作为参数。
+ * 不拆分回复内容，search 可以接收包含空格的关键字，增删则继续交给域名校验。
+ */
+const extractCommandArg = (message: Message, username?: string): string => {
+  const explicit = extractArg(message.text ?? '', username)
+  if (explicit) return explicit
+
+  const reply = message.reply_to_message
+  return (reply?.text ?? reply?.caption ?? '').trim()
+}
+
+/**
  * handler 顶层兜底。dispatch 不 await 订阅者，异常连 unhandledRejection 都没人管，
  * 而 👀 是在流程开头挂上的——中途抛错就会永久残留。这里强制收尾。
  */
@@ -287,7 +300,11 @@ setInterval(() => {
 
 const handleSearch = async (bot: Bot, config: Config, chatId: number, keyword: string) => {
   if (!keyword) {
-    await bot.sendMessage(chatId, `用法：${code('/search <关键字>')}`, MD)
+    await bot.sendMessage(
+      chatId,
+      `用法：${code('/search <关键字>')}，或回复一条消息发送 ${code('/search')}`,
+      MD
+    )
     return
   }
 
@@ -325,7 +342,9 @@ const handleAdd = async (
       chatId,
       raw
         ? `域名格式非法：${code(raw)}`
-        : `用法：${code('/addDomainSuffix <域名>')}`,
+        : `用法：${code('/addDomainSuffix <域名>')}，或回复一条消息发送 ${code(
+            '/addDomainSuffix'
+          )}`,
       MD
     )
     return
@@ -359,7 +378,9 @@ const handleRemove = async (
       chatId,
       raw
         ? `域名格式非法：${code(raw)}`
-        : `用法：${code('/removeDomainSuffix <域名>')}`,
+        : `用法：${code(
+            '/removeDomainSuffix <域名>'
+          )}，或回复一条消息发送 ${code('/removeDomainSuffix')}`,
       MD
     )
     return
@@ -473,7 +494,7 @@ for (const [botName, config] of Object.entries(configs ?? {})) {
     }
 
     await guard(bot, currentChatId, message.message_id, async () => {
-      const arg = extractArg(message.text ?? '', bot.username)
+      const arg = extractCommandArg(message, bot.username)
       const actor = `tg:${message.from?.id ?? 'unknown'}`
 
       switch (cmd) {
