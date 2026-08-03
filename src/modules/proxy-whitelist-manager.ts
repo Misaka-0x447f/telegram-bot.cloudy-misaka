@@ -250,6 +250,42 @@ const logReplyArgumentDebug = (
   )
 }
 
+/** 对照 misaka 与 controller 的 Bot API 隐私能力和当前群成员状态。 */
+const logBotAccessDebug = async (botName: string, chatId: number) => {
+  const aliases = [...new Set(['misaka', botName])]
+  const snapshots = await Promise.all(
+    aliases.map(async (alias) => {
+      const target = getTelegramBotByAnyBotName(alias)
+      try {
+        const me = await target.instance.telegram.getMe()
+        const member = await target.instance.telegram.getChatMember(chatId, me.id)
+        return {
+          alias,
+          getMe: me,
+          chatMember: member
+        }
+      } catch (error) {
+        return {
+          alias,
+          error:
+            error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack
+                }
+              : error
+        }
+      }
+    })
+  )
+
+  void telemetry(
+    'modules/proxy-whitelist-manager.ts/bot-access-debug',
+    ...snapshots
+  )
+}
+
 /**
  * handler 顶层兜底。dispatch 不 await 订阅者，异常连 unhandledRejection 都没人管，
  * 而 👀 是在流程开头挂上的——中途抛错就会永久残留。这里强制收尾。
@@ -551,6 +587,9 @@ for (const [botName, config] of Object.entries(configs ?? {})) {
     await guard(bot, currentChatId, message.message_id, async () => {
       if (!extractArg(message.text ?? '', bot.username)) {
         logReplyArgumentDebug(message, cmd, ctx.update)
+        if (!message.reply_to_message) {
+          void logBotAccessDebug(botName, currentChatId)
+        }
       }
       const arg = extractCommandArg(message, bot.username)
       const actor = `tg:${message.from?.id ?? 'unknown'}`
