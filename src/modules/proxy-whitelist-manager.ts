@@ -196,6 +196,61 @@ const extractCommandArg = (message: Message, username?: string): string => {
 }
 
 /**
+ * 临时诊断群聊回复参数为什么缺失。telegram-typings 版本较旧，没有 quote 与
+ * external_reply 的类型，但 Telegram 会把服务端返回的新字段原样保留在 update 中。
+ */
+const logReplyArgumentDebug = (
+  message: Message,
+  commandName: string,
+  update: unknown
+) => {
+  const current = message as Message & {
+    quote?: { text?: string }
+    external_reply?: Record<string, unknown>
+  }
+  const reply = current.reply_to_message
+  const rawUpdate = JSON.stringify(update) ?? ''
+  // telemetry 每个参数最多保留 1000 字符，最终还要作为一条 Telegram 消息发送。
+  // 留出 label 与结构化摘要的空间，原始 update 最多分 3 段记录 2400 字符。
+  const rawLimit = 2400
+  const chunkSize = 800
+  const rawChunks = rawUpdate
+    .slice(0, rawLimit)
+    .match(new RegExp(`.{1,${chunkSize}}`, 'gs')) ?? []
+
+  void telemetry(
+    'modules/proxy-whitelist-manager.ts/reply-argument-debug',
+    {
+      commandName,
+      commandText: current.text,
+      messageId: current.message_id,
+      chatId: current.chat.id,
+      replyText: reply?.text,
+      replyCaption: reply?.caption,
+      quoteText: current.quote?.text,
+      reply: reply
+        ? {
+            messageId: reply.message_id,
+            entityTypes: reply.entities?.map((entity) => entity.type),
+            captionEntityTypes: reply.caption_entities?.map((entity) => entity.type),
+            keys: Object.keys(reply).sort()
+          }
+        : null,
+      messageKeys: Object.keys(current).sort(),
+      quote: current.quote ?? null,
+      externalReplyKeys: current.external_reply
+        ? Object.keys(current.external_reply).sort()
+        : null,
+      rawUpdateLength: rawUpdate.length,
+      rawUpdateTruncated: rawUpdate.length > rawLimit
+    },
+    ...rawChunks.map(
+      (chunk, index) => `rawUpdate[${index + 1}/${rawChunks.length}]:${chunk}`
+    )
+  )
+}
+
+/**
  * handler 顶层兜底。dispatch 不 await 订阅者，异常连 unhandledRejection 都没人管，
  * 而 👀 是在流程开头挂上的——中途抛错就会永久残留。这里强制收尾。
  */
@@ -481,7 +536,7 @@ for (const [botName, config] of Object.entries(configs ?? {})) {
 
   const bot = getTelegramBotByAnyBotName(botName)
 
-  bot.command.sub(async ({ commandName, currentChatId, message }) => {
+  bot.command.sub(async ({ ctx, commandName, currentChatId, message }) => {
     // 非授权群一律静默，不给任何反馈
     if (!config.superusers?.includes(currentChatId)) return
 
@@ -494,6 +549,9 @@ for (const [botName, config] of Object.entries(configs ?? {})) {
     }
 
     await guard(bot, currentChatId, message.message_id, async () => {
+      if (!extractArg(message.text ?? '', bot.username)) {
+        logReplyArgumentDebug(message, cmd, ctx.update)
+      }
       const arg = extractCommandArg(message, bot.username)
       const actor = `tg:${message.from?.id ?? 'unknown'}`
 
