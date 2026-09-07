@@ -5,6 +5,7 @@ import {
   TelegrafEventBusListenerType
 } from '../interface/telegram'
 import errorMessages from '../utils/errorMessages'
+import { withProcessingReaction } from '../utils/commandReaction'
 import persistConfig from '../utils/persistConfig'
 import {
   convertVideoStickerToGif,
@@ -83,11 +84,17 @@ const createWorker = (worker: BotType) => {
 
   worker.command.sub((p) => {
     if (p.commandName !== command) return
-    return handle(p.message.reply_to_message, p)
+    return withProcessingReaction(
+      worker.instance.telegram, p.currentChatId, p.message.message_id,
+      () => handle(p.message.reply_to_message, p)
+    )
   })
   worker.message.sub((p) => {
     if (p.replyToCommand !== command || p.isCommand) return
-    return handle(p.message, p)
+    return withProcessingReaction(
+      worker.instance.telegram, p.currentChatId, p.message.reply_to_message?.message_id,
+      () => handle(p.message, p)
+    )
   })
 }
 

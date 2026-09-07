@@ -1,36 +1,10 @@
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import path from 'node:path'
-import { createRequire } from 'node:module'
 import { Readable } from 'node:stream'
 import { test } from 'node:test'
-import ts from 'typescript'
-import { fileURLToPath } from 'node:url'
-
-const directory = path.dirname(fileURLToPath(import.meta.url))
-
-// Load only the module under test; importing the bot interface would start
-// real polling and load deployment credentials.
-function loadSource(relativePath, dependencies = {}) {
-  const filename = path.resolve(directory, '..', relativePath)
-  const localRequire = createRequire(filename)
-  const output = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2020,
-      esModuleInterop: true
-    }
-  }).outputText
-  const module = { exports: {} }
-  new Function('require', 'module', 'exports', output)(
-    (name) => Object.hasOwn(dependencies, name) ? dependencies[name] : localRequire(name),
-    module,
-    module.exports
-  )
-  return module.exports
-}
+import { loadSource } from './helpers/load-source.mjs'
 
 const errorMessages = loadSource('src/utils/errorMessages.ts')
+const commandReaction = loadSource('src/utils/commandReaction.ts')
 const sourceSticker = {
   file_id: 'test-file-id', is_video: true, is_animated: false,
   width: 512, height: 512, file_size: 46188
@@ -41,9 +15,11 @@ function setup(overrides = {}) {
   const replies = []
   const documents = []
   const downloaded = []
+  const reactions = []
   const output = Buffer.from('GIF89a-test-output')
   class StickerGifError extends Error {}
   const telegram = {
+    callApi: async (method, data) => { reactions.push({ method, ...data }) },
     getFileLink: async () => 'https://example.invalid/sample.webm',
     sendChatAction: async () => {},
     sendDocument: async (...args) => { documents.push(args) },
@@ -58,6 +34,7 @@ function setup(overrides = {}) {
     '../interface/telegram': { getTelegramBotByAnyBotName: () => worker },
     '../utils/persistConfig': { entries: { fetchSticker: { test: {} } } },
     '../utils/errorMessages': errorMessages,
+    '../utils/commandReaction': commandReaction,
     '../utils/stickerGif': {
       StickerGifError,
       MAX_STICKER_INPUT_BYTES: 1024 * 1024,
@@ -70,7 +47,7 @@ function setup(overrides = {}) {
     message: { message_id: 42, reply_to_message: source },
     sendMessageToCurrentChat: overrides.reply || (async (text) => { replies.push(text) })
   })
-  return { callbacks, replies, documents, downloaded, output, payload }
+  return { callbacks, replies, documents, downloaded, output, payload, reactions }
 }
 
 test('replying to a video sticker sends the named GIF unchanged as a document', async () => {
@@ -84,14 +61,16 @@ test('replying to a video sticker sends the named GIF unchanged as a document', 
   assert.equal(extra.disable_content_type_detection, true)
   assert.equal(extra.reply_to_message_id, 42)
   assert.equal(h.replies.length, 0)
+  if (h.documents.length) assert.deepEqual(h.reactions.map((r) => r.reaction), [[{ type: 'emoji', emoji: '👀' }], []])
 })
 
 test('a sticker replying to the command is also accepted', async () => {
   const h = setup()
   await h.callbacks.message({ ...h.payload(), isCommand: false,
-    replyToCommand: 'fetch_sticker_gif', message: { message_id: 43, sticker: sourceSticker } })
+    replyToCommand: 'fetch_sticker_gif', message: { message_id: 43, sticker: sourceSticker, reply_to_message: { message_id: 41 } } })
   assert.equal(h.documents.length, 1)
   assert.equal(h.documents[0][2].reply_to_message_id, 43)
+  assert.deepEqual(h.reactions.map((r) => r.message_id), [41, 41])
 })
 
 test('unrelated commands and command messages do not trigger conversion', async () => {

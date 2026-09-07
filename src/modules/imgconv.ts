@@ -8,13 +8,15 @@ import { Message } from 'telegram-typings'
 import {
   BotType,
   exportBot,
-  getTelegramBotByAnyBotName
+  getTelegramBotByAnyBotName,
+  TelegrafEventBusListenerType
 } from '../interface/telegram'
 import errorMessages, {
   getHelpMessage,
   ParamsDefinition
 } from '../utils/errorMessages'
 import { downloadStream } from '../utils/file'
+import { withProcessingReaction } from '../utils/commandReaction'
 
 const SHORT_COOLDOWN_MS = 30 * 1000
 const MAX_QUOTA = 5
@@ -328,15 +330,13 @@ const collectStreamToBuffer = (
   })
 
 const createWorker = (worker: BotType) => {
-  worker.command.sub(async (p) => {
+  const handleCommand = async (p: Parameters<TelegrafEventBusListenerType<'command'>>[0]) => {
     const {
       args,
-      commandName,
       currentChatId,
       message,
       sendMessageToCurrentChat
     } = p
-    if (commandName !== 'imgconv') return
 
     const userId = message.from?.id
     if (!userId) {
@@ -537,6 +537,15 @@ const createWorker = (worker: BotType) => {
         console.warn('imgconv: failed to send quota status message', e)
       }
     }
+  }
+  worker.command.sub((p) => {
+    if (p.commandName !== 'imgconv') return
+    return withProcessingReaction(
+      worker.instance.telegram, p.currentChatId, p.message.message_id,
+      () => handleCommand(p)
+    ).catch(async () => {
+      await p.sendMessageToCurrentChat('转换处理失败，请稍后重试。').catch(() => {})
+    })
   })
 }
 
