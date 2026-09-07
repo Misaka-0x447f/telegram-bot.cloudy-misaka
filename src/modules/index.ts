@@ -1,6 +1,7 @@
 import './bili-live'
 import './chat-bridge'
 import './fetch-sticker'
+import './fetch-sticker-gif'
 import './fetch-video'
 import './imgconv'
 import './galnet'
