@@ -16,13 +16,21 @@ const replyTargetStore = {
   messageId: null as number | null
 }
 
-type ChatInfoParseResult = {
-  from: string
-  chatId: string
-  messageId: string
-  userName: string
-  link: string
-  shortcut?: string
+const hasReplyTarget = (value: unknown): value is Record<'chatId' | 'messageId', unknown> =>
+  typeof value === 'object' && value !== null && 'chatId' in value && 'messageId' in value
+
+const parseReplyTarget = (text: string) => {
+  const value: unknown = tryCatchReturn(() => yaml.load(text), () => null)
+  if (!hasReplyTarget(value)) return null
+  if (
+    (typeof value.chatId !== 'number' && typeof value.chatId !== 'string') ||
+    (typeof value.messageId !== 'number' && typeof value.messageId !== 'string')
+  ) return null
+  const chatId = Number(value.chatId)
+  const messageId = Number(value.messageId)
+  if (!Number.isSafeInteger(chatId) || chatId === 0) return null
+  if (!Number.isSafeInteger(messageId) || messageId <= 0) return null
+  return { chatId, messageId }
 }
 
 const spamPatterns = [
@@ -200,30 +208,27 @@ const chatInfoString = (chat: Chat, message: Message, shortcut?: string) =>
 
 for (const [botName, config] of Object.entries(configs)) {
   const bot = getTelegramBotByAnyBotName(botName)
-  bot.message.sub(async ({ sendMessageToCurrentChat, ctx, message, currentChat, currentChatId }) => {
+  bot.message.sub(async ({ sendMessageToCurrentChat, ctx, message, currentChat, currentChatId, isCommand }) => {
     const isPrivate = message.chat.type === 'private'
-    // 私聊转发功能已完全关闭：不转发、不回复、不做特征检查，直接静默忽略。
-    if (isPrivate) return
     if (!config.adminChatIdsCanReceiveReply) return
-    const parseResult = tryCatchReturn<ChatInfoParseResult | null>(
-      () =>
-        yaml.load(message.reply_to_message?.text || '') as ChatInfoParseResult,
-      () => null
-    )
-    if (parseResult && isPrivate) {
-      if (config.adminChatIds && !config.adminChatIds.includes(currentChatId)) {
-        await sendMessageToCurrentChat('Permission denied.')
-        return
+    if (isPrivate) {
+      if (isCommand) return
+      // 普通私聊保持关闭，只接受已配置管理员的定向回复。
+      if (!config.adminChatIds?.includes(currentChatId)) return
+      const replyTarget = parseReplyTarget(message.reply_to_message?.text || '')
+      if (!replyTarget) return
+      try {
+        await ctx.telegram.sendCopy(replyTarget.chatId, message, {
+          reply_to_message_id: replyTarget.messageId
+        })
+      } catch (error) {
+        await telemetry('say.ts/reply', '回复发送失败', {
+          ...replyTarget,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }).catch((reportError) => console.error('say.ts/reply: telemetry failed', reportError))
+        await sendMessageToCurrentChat('回复发送失败，请稍后重试。')
+          .catch((reportError) => console.error('say.ts/reply: failure notification failed', reportError))
       }
-      await ctx.telegram.sendCopy(
-        parseInt(parseResult.chatId),
-        message,
-        parseResult
-          ? {
-              reply_to_message_id: parseResult.messageId
-            }
-          : {}
-      )
       return
     }
     // 裸 /start 既不转发也不计为垃圾，直接静默忽略
@@ -231,8 +236,7 @@ for (const [botName, config] of Object.entries(configs)) {
     if (
       (message.reply_to_message &&
         message.reply_to_message?.from?.username === bot.username) ||
-      message.text?.includes(`@${bot.username}`) ||
-      isPrivate
+      message.text?.includes(`@${bot.username}`)
     ) {
       const threshold = 2
       let matchCount = 0
@@ -289,7 +293,6 @@ for (const [botName, config] of Object.entries(configs)) {
         })
         return
       }
-      if (isAdmin && isPrivate) return
       const shortcut = config.list.find((el) => el.id === currentChatId)?.name
 
       for (const el of config.adminChatIds || []) {
