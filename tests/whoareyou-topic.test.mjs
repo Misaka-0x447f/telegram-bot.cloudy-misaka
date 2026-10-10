@@ -2,6 +2,9 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { loadSource } from './helpers/load-source.mjs'
 
+// 用真实的 topic 工具模块，避免 mock 与实现（General=1 等规则）漂移。
+const telegramUtils = loadSource('src/utils/telegram.ts')
+
 const GROUP_ID = -1001234567890
 const TOPIC_ID = 17585
 const GENERAL_TOPIC_ID = 1
@@ -55,7 +58,8 @@ const createHarness = (options = {}) => {
     '../utils/errorMessages': {
       illegalArguments: () => '非法参数文案'
     },
-    '../utils/lang': { isNumeric: (value) => /^-?\d+$/.test(String(value ?? '')) }
+    '../utils/lang': { isNumeric: (value) => /^-?\d+$/.test(String(value ?? '')) },
+    '../utils/telegram': telegramUtils
   })
   const dispatch = async (message, { args = [], commandName = 'whoareyou' } = {}) => {
     assert.equal(commandHandlers.length, 1, '应只注册一个命令处理器')

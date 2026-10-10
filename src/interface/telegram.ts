@@ -12,6 +12,7 @@ import HttpsProxyAgent from 'https-proxy-agent'
 import { SocksProxyAgent } from 'socks-proxy-agent'
 
 import { runActionFunctions } from '../utils/actionFunctions'
+import { getReplyTopicId } from '../utils/telegram'
 import telegrafThrottler from 'telegraf-throttler'
 import Bottleneck from 'bottleneck'
 import { defaultTo } from 'lodash-es'
@@ -135,7 +136,20 @@ const botFactory = (el: typeof bots[0]) => {
       message,
       sendMessageToCurrentChat: (
         ...params: TupleOmitFirst<Parameters<Telegram['sendMessage']>>
-      ) => sendMessage(message.chat.id, ...params),
+      ) => {
+        // 话题群/话题私聊里，不带 message_thread_id 的回复会被 Telegram 投到 General，
+        // 用户在话题里看不到。这里跟随触发消息所在话题；General 与无话题时不附加，
+        // 并保留调用方自己的 extra。
+        const topicId = getReplyTopicId(message)
+        if (topicId === undefined) return sendMessage(message.chat.id, ...params)
+        const [text, extra] = params
+        // ExtraSendMessage 的类型同样早于论坛话题，这里补上官方字段。
+        const extraWithTopic: tt.ExtraSendMessage & { message_thread_id: number } = {
+          ...extra,
+          message_thread_id: topicId
+        }
+        return sendMessage(message.chat.id, text, extraWithTopic)
+      },
       currentChat,
       currentChatId: message.chat.id
     }
@@ -172,11 +186,27 @@ const botFactory = (el: typeof bots[0]) => {
       actions: Actions,
       options: {
         defaultChatId: number
-         
+        // 传入触发消息时，发往 defaultChatId（当前会话）的消息会留在该消息所在话题
+        message?: Message
         filterMethod?: (text: string, filterText: RegexString) => boolean
       },
       params: Record<string, string | number | undefined> = {}
     ) => {
+      // 只有发往当前会话（defaultChatId）的消息跟随话题；发往其它 dest 的目标保持原样。
+      const replyTopicId = options.message ? getReplyTopicId(options.message) : undefined
+      const threadFor = (chatId: number) =>
+        replyTopicId !== undefined && chatId === options.defaultChatId ? replyTopicId : undefined
+      // ExtraSendMessage 的类型早于论坛话题，用交叉类型补上官方字段（运行时会展开进 API payload）。
+      type MessageExtra = tt.ExtraSendMessage & { message_thread_id?: number }
+      type ForwardExtra = { disable_notification?: boolean, message_thread_id?: number }
+      const messageExtra = (chatId: number, extra?: tt.ExtraSendMessage): MessageExtra | undefined => {
+        const topicId = threadFor(chatId)
+        return topicId === undefined ? extra : { ...extra, message_thread_id: topicId }
+      }
+      const forwardExtra = (chatId: number): ForwardExtra | undefined => {
+        const topicId = threadFor(chatId)
+        return topicId === undefined ? undefined : { message_thread_id: topicId }
+      }
       // convert actions to promises
       const promises = actions.map((action) => async () => {
         // group of action.
@@ -201,12 +231,12 @@ const botFactory = (el: typeof bots[0]) => {
             ) {
               return
             }
-            await sendMessage(chatId, text, step?.extra)
+            await sendMessage(chatId, text, messageExtra(chatId, step?.extra))
           } else if (step.type === 'sleep') await sleep(step.time)
           else if (step.type === 'messageByForward') {
             await promiseRetry((retry) =>
               el.instance.telegram
-                .forwardMessage(chatId, step.source, step.messageId)
+                .forwardMessage(chatId, step.source, step.messageId, forwardExtra(chatId))
                 .catch(retry)
             )
           } else {
@@ -214,7 +244,7 @@ const botFactory = (el: typeof bots[0]) => {
               // @ts-ignore
               step.type
             } was not defined with step ${JSON.stringify(step)}`
-            await sendMessage(chatId, errorMsg)
+            await sendMessage(chatId, errorMsg, messageExtra(chatId))
           }
         }
       })
